@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>Web 德州扑克 - 巅峰版</title>
+    <style>
+        body { font-family: sans-serif; background-color: #1a1a2e; color: white; margin: 0; overflow: hidden; }
+        
+        #login-screen { position: absolute; width: 100vw; height: 100vh; background: #16213e; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; }
+        #login-screen input { padding: 15px; font-size: 18px; border-radius: 8px; border: none; margin-bottom: 20px; text-align: center; }
+        #login-screen button { padding: 15px 30px; font-size: 18px; background: #e94560; color: white; border: none; border-radius: 8px; cursor: pointer; }
+        #login-error-msg { color: #e74c3c; font-weight: bold; margin-bottom: 10px; }
+
+        .modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #2c3e50; padding: 20px; border-radius: 10px; z-index: 200; border: 2px solid #e74c3c; text-align: center; }
+        .modal input { display: block; width: 80%; margin: 10px auto; padding: 10px; border-radius: 5px; border: none; }
+        .modal button { margin-top: 15px; background: #2ecc71; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;}
+        #btn-close-modal { background: #95a5a6; margin-left: 10px; }
+
+        #game-screen { display: none; width: 100vw; height: 100vh; position: relative; }
+        
+        .poker-table { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 1000px; height: 500px; background: #27ae60; border-radius: 250px; border: 15px solid #2c3e50; box-shadow: 0 0 50px rgba(0,0,0,0.5) inset; }
+        .table-center { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); text-align: center; width: 100%;}
+        .pot { font-size: 24px; color: #f1c40f; font-weight: bold; background: rgba(0,0,0,0.5); padding: 5px 20px; border-radius: 20px; display: inline-block;}
+        .stage { color: #ecf0f1; margin-top: 5px; font-size: 18px; }
+        
+        .community-cards { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; gap: 10px; }
+        .card { width: 60px; height: 85px; background: white; border-radius: 5px; color: black; font-size: 20px; font-weight: bold; display: flex; justify-content: center; align-items: center; box-shadow: 2px 2px 5px rgba(0,0,0,0.5); animation: dealAnim 0.5s ease-out; }
+        .card.red { color: #e74c3c; }
+        .card.hidden { background: #2980b9; border: 3px solid white; background-image: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(255,255,255,.2) 5px, rgba(255,255,255,.2) 10px); color: transparent;}
+        @keyframes dealAnim { from { transform: translateY(-50px) scale(0); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+
+        .seat { position: absolute; width: 130px; text-align: center; }
+        .seat-0 { bottom: -80px; left: 50%; transform: translateX(-50%); } 
+        .seat-1 { bottom: 50px; left: -120px; } 
+        .seat-2 { top: 50px; left: -120px; } 
+        .seat-3 { top: -80px; left: 50%; transform: translateX(-50%); } 
+        .seat-4 { top: 50px; right: -120px; } 
+        .seat-5 { bottom: 50px; right: -120px; } 
+
+        .player-panel { position: relative; background: #34495e; padding: 10px; border-radius: 10px; border: 3px solid transparent; transition: all 0.3s; z-index: 5;}
+        .player-panel.active-turn { border-color: #f1c40f; box-shadow: 0 0 15px #f1c40f; transform: scale(1.05); }
+        .avatar { font-size: 40px; margin: 0; }
+        .nickname { font-size: 14px; font-weight: bold; color: #bdc3c7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+        .chips { font-size: 14px; color: #f1c40f; margin-top: 5px; }
+        
+        .role-badge { position: absolute; top: -15px; right: -15px; color: white; padding: 3px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; border: 2px solid #2c3e50; z-index: 15; box-shadow: 0 2px 5px rgba(0,0,0,0.5);}
+        .role-badge.dealer { background: #f1c40f; color: black; } 
+        .role-badge.sb { background: #3498db; } 
+        .role-badge.bb { background: #e74c3c; }
+        .crown { position: absolute; top: -35px; left: 50%; transform: translateX(-50%); font-size: 35px; text-shadow: 0 0 15px gold; animation: floatCrown 1.5s ease-in-out infinite; z-index: 20; }
+        @keyframes floatCrown { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, -10px); } }
+
+        .hole-cards { display: flex; justify-content: center; gap: 5px; margin-top: -15px; z-index: 1; position: relative;}
+        .hole-cards .card { width: 45px; height: 65px; font-size: 16px; } 
+
+        .chat-bubble { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: white; color: black; padding: 5px 10px; border-radius: 10px; font-size: 14px; font-weight: bold; white-space: nowrap; margin-bottom: 10px; animation: popIn 0.3s ease; z-index: 50; }
+        .chat-bubble::after { content: ''; position: absolute; top: 100%; left: 50%; margin-left: -5px; border-width: 5px; border-style: solid; border-color: white transparent transparent transparent; }
+        @keyframes popIn { 0% { transform: translateX(-50%) scale(0); } 100% { transform: translateX(-50%) scale(1); } }
+
+        #control-bar { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 15px; z-index: 100; }
+        #control-bar button { padding: 10px 20px; font-size: 16px; cursor: pointer; border: none; border-radius: 5px; font-weight: bold;}
+        
+        #chat-input-area { position: fixed; bottom: 20px; left: 20px; display: flex; gap: 10px; z-index: 100;}
+        #chat-input-area input { padding: 10px; border-radius: 20px; border: none; outline: none; width: 150px;}
+        #chat-input-area button { padding: 10px 15px; border-radius: 20px; border: none; background: #3498db; color: white; cursor: pointer;}
+    </style>
+</head>
+<body>
+    <div id="login-screen">
+        <h1 style="font-size: 40px; margin-bottom: 30px;">♠️ Web 德州扑克 ♥️</h1>
+        <p id="login-error-msg"></p>
+        <input type="text" id="username" placeholder="输入预设账号">
+        <input type="password" id="password" placeholder="输入密码">
+        <button onclick="joinGame()">登录游戏</button>
+    </div>
+
+    <div id="top-bar" style="display: none; position: absolute; top: 10px; right: 10px; z-index: 100;">
+        <button onclick="document.getElementById('password-modal').style.display='block'" style="background: #e67e22; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer;">⚙️ 修改密码</button>
+    </div>
+
+    <div id="password-modal" class="modal">
+        <h3 style="margin-top: 0; color: #f1c40f;">修改我的密码</h3>
+        <input type="password" id="old-pwd" placeholder="原密码">
+        <input type="password" id="new-pwd" placeholder="新密码">
+        <button onclick="changePassword()">确认修改</button>
+        <button id="btn-close-modal" onclick="document.getElementById('password-modal').style.display='none'">取消</button>
+    </div>
+
+    <div id="game-screen">
+        <div class="poker-table">
+            <div class="table-center">
+                <div class="pot">🏆 奖池: $<span id="pot-display">0</span></div>
+                <div class="stage" id="stage-display">等待开始...</div>
+            </div>
+            <div class="community-cards" id="community-cards-container"></div>
+            <div id="seat-0" class="seat seat-0"></div><div id="seat-1" class="seat seat-1"></div>
+            <div id="seat-2" class="seat seat-2"></div><div id="seat-3" class="seat seat-3"></div>
+            <div id="seat-4" class="seat seat-4"></div><div id="seat-5" class="seat seat-5"></div>
+        </div>
+        <div id="chat-input-area">
+            <input type="text" id="chat-input" placeholder="嘲讽一下..."><button onclick="sendChat()">发送</button>
+        </div>
+        <div id="control-bar"></div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let mySeatIndex = -1;
+        function createCardHTML(cardData) {
+            if (cardData === 'hidden') return `<div class="card hidden"></div>`;
+            const isRed = cardData.suit === '♥️' || cardData.suit === '♦️';
+            return `<div class="card ${isRed ? 'red' : ''}">${cardData.suit}${cardData.rank}</div>`;
+        }
+        
+        function joinGame() { 
+            const name = document.getElementById('username').value; 
+            const pwd = document.getElementById('password').value;
+            if (name && pwd) socket.emit('login', {username: name, password: pwd}); 
+            else document.getElementById('login-error-msg').innerText = "账号或密码不能为空！";
+        }
+        
+        socket.on('loginError', (msg) => { document.getElementById('login-error-msg').innerText = msg; });
+        socket.on('loginSuccess', (seatIdx) => { 
+            mySeatIndex = seatIdx; 
+            document.getElementById('login-screen').style.display = 'none'; 
+            document.getElementById('game-screen').style.display = 'block'; 
+            document.getElementById('top-bar').style.display = 'block';
+        });
+
+        function changePassword() {
+            const oldPwd = document.getElementById('old-pwd').value; const newPwd = document.getElementById('new-pwd').value;
+            if (oldPwd && newPwd) socket.emit('changePassword', { oldPassword: oldPwd, newPassword: newPwd });
+        }
+        socket.on('passwordChanged', (msg) => { alert(msg); document.getElementById('password-modal').style.display='none'; });
+        socket.on('passwordChangeFailed', (msg) => { alert(msg); });
+
+        socket.on('updateTable', (data) => {
+            document.getElementById('pot-display').innerText = data.pot;
+            const stageNames = { 'waiting': '等待开始...', 'pre-flop': '翻牌前', 'flop': '翻牌圈', 'turn': '转牌圈', 'river': '河牌圈', 'showdown': '🚨 亮牌结算！请准备 🚨' };
+            document.getElementById('stage-display').innerText = stageNames[data.gameState];
+            const boardHTML = data.communityCards.map(c => createCardHTML(c)).join('');
+            document.getElementById('community-cards-container').innerHTML = boardHTML;
+            
+            for (let i = 0; i < 6; i++) {
+                const seatDiv = document.getElementById(`seat-${i}`);
+                const player = data.seats[i];
+                if (!player) { seatDiv.innerHTML = `<div class="player-panel" style="opacity:0.3"><div class="nickname">空位</div></div>`; continue; }
+                let holeCardsHTML = '';
+                if (player.holeCards && player.holeCards.length > 0) {
+                    let showCards = (data.gameState === 'showdown') || (i === mySeatIndex);
+                    holeCardsHTML = `<div class="hole-cards">${showCards ? player.holeCards.map(c => createCardHTML(c)).join('') : createCardHTML('hidden')+createCardHTML('hidden')}</div>`;
+                }
+                const isTurn = (data.currentTurnSeatIdx === i) ? 'active-turn' : '';
+                const statusColor = player.isReady ? '#2ecc71' : (player.status==='folded' ? '#e74c3c' : '#bdc3c7');
+                const crownHTML = player.isWinner ? `<div class="crown">👑</div>` : '';
+                let roleHTML = '';
+                if (player.role === '庄') roleHTML = `<div class="role-badge dealer">D 庄</div>`;
+                else if (player.role === '小盲') roleHTML = `<div class="role-badge sb">SB 10</div>`;
+                else if (player.role === '大盲') roleHTML = `<div class="role-badge bb">BB 20</div>`;
+                
+                seatDiv.innerHTML = `
+                    <div class="player-panel ${isTurn}">
+                        ${crownHTML} ${roleHTML}
+                        <div class="avatar">${player.avatar}</div>
+                        <div class="nickname" style="color:${statusColor}">${player.username} ${player.status==='folded'?'(弃牌)':''}</div>
+                        <div class="chips">💰 ${player.chips}</div>
+                        <div style="font-size:12px; color:#aaa; margin-top:3px;">本轮压注: ${player.roundBet}</div>
+                    </div>
+                    ${holeCardsHTML}
+                `;
+            }
+            
+            const bar = document.getElementById('control-bar'); bar.innerHTML = ''; 
+            const me = data.seats[mySeatIndex]; if (!me) return;
+            
+            if ((data.gameState === 'waiting' || data.gameState === 'showdown') && !me.isReady) {
+                bar.innerHTML = `<button style="background:#2ecc71;color:white;" onclick="socket.emit('ready')">✅ 准备开始</button>`;
+            } 
+            else if ((data.gameState === 'waiting' || data.gameState === 'showdown') && me.isReady) {
+                bar.innerHTML = `<span style="color:#2ecc71; font-size:18px;">✅ 等待其他人...</span>`;
+            } 
+            else if (data.gameState !== 'waiting' && data.gameState !== 'showdown' && data.currentTurnSeatIdx === mySeatIndex) {
+                let callDiff = data.currentHighestBet - me.roundBet; 
+                bar.innerHTML += `<button style="background:#95a5a6;color:white;" onclick="socket.emit('playerAction', {type: 'fold'})">🏳️ 弃牌</button>`;
+                if (callDiff === 0) bar.innerHTML += `<button style="background:#f39c12;color:white;" onclick="socket.emit('playerAction', {type: 'check'})">✊ 过牌 (Check)</button>`;
+                else bar.innerHTML += `<button style="background:#3498db;color:white;" onclick="socket.emit('playerAction', {type: 'call'})">💵 跟注 (补 ${callDiff})</button>`;
+                bar.innerHTML += `<button style="background:#e74c3c;color:white;" onclick="socket.emit('playerAction', {type: 'raise', amount: 50})">🔥 加注 (再加 50)</button>`;
+            }
+        });
+        
+        function sendChat() { const input = document.getElementById('chat-input'); if (input.value) { socket.emit('chatMessage', input.value); input.value = ''; } }
+        socket.on('chatBubble', (data) => {
+            const seatDiv = document.getElementById(`seat-${data.seatIdx}`); if (!seatDiv) return;
+            const bubble = document.createElement('div'); bubble.className = 'chat-bubble'; bubble.innerText = data.text;
+            seatDiv.appendChild(bubble); setTimeout(() => { bubble.remove(); }, 3000);
+        });
+    </script>
+</body>
+</html>
