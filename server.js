@@ -202,11 +202,28 @@ io.on('connection', (socket) => {
 
     socket.on('chatMessage', (msg) => { if (socket.seatIdx !== undefined) io.emit('chatBubble', { seatIdx: socket.seatIdx, text: msg }); });
 
+// 👉 修改点 2：替换 ready 事件，禁止观战者准备，并且计算活跃玩家时不带观战者
     socket.on('ready', () => {
         if (gameState !== 'waiting' && gameState !== 'showdown') return;
-        seats[socket.seatIdx].isReady = true;
-        let activePlayers = seats.filter(s => s !== null);
-        if (activePlayers.length >= 2 && activePlayers.every(p => p.isReady)) { gameState = 'waiting'; nextStage(); } else broadcastTable();
+        let p = seats[socket.seatIdx];
+        if (!p) return;
+        
+        // 没钱的人不准点准备
+        if (p.chips <= 0) {
+            p.status = 'spectator';
+            p.isReady = false;
+            return;
+        }
+
+        p.isReady = true;
+        // 只有非观战玩家才算作 activePlayers
+        let activePlayers = seats.filter(s => s !== null && s.status !== 'spectator');
+        
+        if (activePlayers.length >= 2 && activePlayers.every(player => player.isReady)) { 
+            gameState = 'waiting'; nextStage(); 
+        } else {
+            broadcastTable();
+        }
     });
 
     socket.on('revealCards', () => {
