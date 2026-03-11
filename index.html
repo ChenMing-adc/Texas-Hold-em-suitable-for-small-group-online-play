@@ -6,17 +6,14 @@
     <title>Web 德州扑克 - 巅峰版</title>
     <style>
         body { font-family: sans-serif; background-color: #1a1a2e; color: white; margin: 0; overflow: hidden; touch-action: none; }
-        
         #login-screen { position: absolute; width: 100vw; height: 100vh; background: #16213e; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; }
         #login-screen input { padding: 15px; font-size: 18px; border-radius: 8px; border: none; margin-bottom: 20px; text-align: center; width: 80%; max-width: 300px;}
         #login-screen button { padding: 15px 30px; font-size: 18px; background: #e94560; color: white; border: none; border-radius: 8px; cursor: pointer; }
         #login-error-msg { color: #e74c3c; font-weight: bold; margin-bottom: 10px; }
-
         .modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #2c3e50; padding: 20px; border-radius: 10px; z-index: 200; border: 2px solid #e74c3c; text-align: center; width: 80%; max-width: 300px;}
         .modal input { display: block; width: 80%; margin: 10px auto; padding: 10px; border-radius: 5px; border: none; }
         .modal button { margin-top: 15px; background: #2ecc71; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;}
         #btn-close-modal { background: #95a5a6; margin-left: 10px; }
-
         #game-screen { display: none; width: 100vw; height: 100vh; position: relative; }
         
         #pot-container { position: fixed; top: 20px; left: 20px; z-index: 100; background: rgba(22, 33, 62, 0.85); padding: 10px 20px; border-radius: 15px; border: 2px solid #f1c40f; box-shadow: 0 5px 20px rgba(0,0,0,0.6); display: flex; flex-direction: column; gap: 5px; }
@@ -25,17 +22,22 @@
 
         .poker-table { position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); width: 85vw; max-width: 900px; height: 45vw; max-height: 450px; background: #27ae60; border-radius: 50%; border: clamp(5px, 1.5vw, 15px) solid #2c3e50; box-shadow: 0 0 clamp(10px, 4vw, 50px) rgba(0,0,0,0.5) inset; }
         
+        #deck-container { position: absolute; top: 25%; left: 65%; transform: translate(-50%, -50%); z-index: 4; }
+        .deck-card { position: absolute; box-shadow: 2px 2px 5px rgba(0,0,0,0.8); }
+        .deck-card:nth-child(1) { transform: rotate(-5deg); top: 0; left: 0; }
+        .deck-card:nth-child(2) { transform: rotate(2deg); top: -2px; left: -1px; }
+        .deck-card:nth-child(3) { transform: rotate(-2deg); top: -4px; left: -2px; position: relative;}
+
         .community-cards { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; gap: clamp(3px, 1vw, 10px); z-index: 5;}
+        .card-slot { width: clamp(40px, 6vw, 60px); height: clamp(56px, 8.5vw, 85px); border: 2px dashed rgba(255,255,255,0.2); border-radius: 5px; }
         .card { width: clamp(40px, 6vw, 60px); height: clamp(56px, 8.5vw, 85px); background: white; border-radius: 5px; color: black; font-size: clamp(14px, 2vw, 20px); font-weight: bold; display: flex; justify-content: center; align-items: center; box-shadow: 2px 2px 5px rgba(0,0,0,0.5); }
         .card.red { color: #e74c3c; }
         .card.hidden-bg { background: #2980b9; border: 2px solid white; background-image: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(255,255,255,.2) 5px, rgba(255,255,255,.2) 10px); color: transparent;}
-        .community-cards .card { animation: dealAnim 0.5s ease-out; }
-        @keyframes dealAnim { from { transform: translateY(-50px) scale(0); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+        .flying-card { position: absolute; z-index: 100; transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1); }
 
-        .chip-token { position: absolute; width: clamp(20px, 3.5vw, 30px); height: clamp(20px, 3.5vw, 30px); border-radius: 50%; border: 3px dashed rgba(255,255,255,0.7); box-shadow: 2px 2px 5px rgba(0,0,0,0.6), inset 0 0 5px rgba(0,0,0,0.5); color: white; font-size: clamp(8px, 1.2vw, 12px); font-weight: bold; display: flex; justify-content: center; align-items: center; z-index: 2; animation: throwIn 0.3s ease-out forwards; }
-        @keyframes throwIn { 0% { opacity: 0; transform: translate(-50%, -50%) scale(4) translateY(-50px); } 100% { opacity: 1; transform: translate(-50%, -50%) rotate(var(--rot)); } }
+        .chip-token { position: absolute; width: clamp(20px, 3.5vw, 30px); height: clamp(20px, 3.5vw, 30px); border-radius: 50%; border: 3px dashed rgba(255,255,255,0.7); box-shadow: 2px 2px 5px rgba(0,0,0,0.6), inset 0 0 5px rgba(0,0,0,0.5); color: white; font-size: clamp(8px, 1.2vw, 12px); font-weight: bold; display: flex; justify-content: center; align-items: center; z-index: 6; animation: throwIn 0.3s ease-out forwards; }
+        @keyframes throwIn { 0% { opacity: 0; transform: translate(-50%, -50%) scale(2) translateY(-30px); } 100% { opacity: 1; transform: translate(-50%, -50%) rotate(var(--rot)); } }
 
-        /* 👉 结算时飘起的金钱数字特效 */
         .float-money { position: absolute; color: #2ecc71; font-weight: bold; font-size: clamp(24px, 4vw, 32px); top: -20px; left: 50%; transform: translate(-50%, 0); text-shadow: 0 0 10px rgba(0,0,0,0.8); z-index: 100; animation: floatMoneyAnim 1.5s ease-out forwards; pointer-events: none; }
         @keyframes floatMoneyAnim { 0% { opacity: 1; transform: translate(-50%, 0) scale(1); } 100% { opacity: 0; transform: translate(-50%, -80px) scale(1.2); } }
 
@@ -61,18 +63,13 @@
         .crown { position: absolute; top: -30px; left: 50%; transform: translateX(-50%); font-size: clamp(20px, 3.5vw, 35px); text-shadow: 0 0 15px gold; animation: floatCrown 1.5s ease-in-out infinite; z-index: 20; }
         @keyframes floatCrown { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, -10px); } }
 
-        .hole-cards { position: absolute; display: flex; gap: 5px; z-index: 5; animation: dealHole 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        @keyframes dealHole { 0% { opacity: 0; transform: scale(0); } 100% { opacity: 1; transform: scale(1); } }
-        #seat-0 .hole-cards { top: -85px; left: 50%; transform: translateX(-50%); } 
-        #seat-3 .hole-cards { bottom: -85px; left: 50%; transform: translateX(-50%); } 
-        #seat-1 .hole-cards { left: 110%; top: 50%; transform: translateY(-50%); } 
-        #seat-2 .hole-cards { left: 110%; top: 50%; transform: translateY(-50%); } 
-        #seat-4 .hole-cards { right: 110%; top: 50%; transform: translateY(-50%); } 
-        #seat-5 .hole-cards { right: 110%; top: 50%; transform: translateY(-50%); } 
-        .hole-cards .card { width: clamp(35px, 5vw, 50px); height: clamp(49px, 7vw, 70px); font-size: clamp(12px, 1.8vw, 18px); margin: 0;} 
+        /* 手牌：取消整组渐变，保留单张控制 */
+        .hole-cards { display: flex; justify-content: center; gap: 2px; margin-top: -15px; z-index: 10; position: relative; }
+        .hole-cards .card { width: clamp(30px, 4.5vw, 45px); height: clamp(43px, 6.5vw, 65px); font-size: clamp(12px, 1.5vw, 16px); margin: 0; } 
         
-        .flip-container { perspective: 1000px; cursor: pointer; }
-        .flip-inner { width: 100%; height: 100%; position: relative; transition: transform 0.6s; transform-style: preserve-3d; }
+        .flip-container { perspective: 1000px; }
+        .my-card-container { cursor: pointer; }
+        .flip-inner { width: 100%; height: 100%; position: relative; transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); transform-style: preserve-3d; }
         .flip-container.peeked .flip-inner { transform: rotateY(180deg); }
         .flip-front, .flip-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 5px; display: flex; justify-content: center; align-items: center; box-shadow: 2px 2px 5px rgba(0,0,0,0.5); }
         .flip-front { background: #2980b9; border: 2px solid white; background-image: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(255,255,255,.2) 5px, rgba(255,255,255,.2) 10px); } 
@@ -93,6 +90,7 @@
             .poker-table { width: 90vw; height: 130vw; max-height: 60vh; border-radius: 150px; }
             #pot-container { top: 10px; left: 10px; padding: 5px 10px; }
             .pot { font-size: 14px; } .stage { font-size: 12px; }
+            #deck-container { top: 15%; left: 50%; } 
             .seat-1 { top: 75%; left: 0%; } .seat-2 { top: 25%; left: 0%; } .seat-4 { top: 25%; left: 100%; } .seat-5 { top: 75%; left: 100%; } 
             #control-bar { width: 95vw; flex-wrap: wrap; justify-content: center; bottom: 10px; padding: 8px;}
             #control-bar button { padding: 10px 5px; font-size: 14px; flex: 1 1 45%; } 
@@ -132,8 +130,15 @@
         </div>
 
         <div class="poker-table">
-            <div id="chips-container" style="position: absolute; width: 100%; height: 100%; pointer-events: none; z-index: 3;"></div>
-            <div class="community-cards" id="community-cards-container"></div>
+            <div id="deck-container">
+                <div class="card hidden-bg deck-card"></div><div class="card hidden-bg deck-card"></div><div class="card hidden-bg deck-card"></div>
+            </div>
+            <div id="chips-container" style="position: absolute; width: 100%; height: 100%; pointer-events: none; z-index: 6;"></div>
+            
+            <div class="community-cards" id="community-cards-container">
+                <div class="card-slot"></div><div class="card-slot"></div><div class="card-slot"></div><div class="card-slot"></div><div class="card-slot"></div>
+            </div>
+            
             <div id="seat-0" class="seat seat-0"></div><div id="seat-1" class="seat seat-1"></div>
             <div id="seat-2" class="seat seat-2"></div><div id="seat-3" class="seat seat-3"></div>
             <div id="seat-4" class="seat seat-4"></div><div id="seat-5" class="seat seat-5"></div>
@@ -147,113 +152,174 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        const socket = io();
+    const socket = io();
         let mySeatIndex = -1; let expandedSeats = new Set(); let isMyCardsPeeked = false;
-        let previousPot = 0; let audioCtx; 
+        let audioCtx; 
+        
+        let lastGameState = 'waiting';
+        let isDealingAnimationPlaying = false; 
+        // 👉 核心修改 1：弃用 previousRoundBets，改用 previousChips 监控总资产
+        let previousChips = {}; 
+        let previousCommunityCount = 0; 
+        let dealtCards = new Set(); 
 
         function initAudio() {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             if (audioCtx.state === 'suspended') audioCtx.resume();
         }
 
-        // 丢筹码音效
         function playChipSound() {
             if (!audioCtx || audioCtx.state === 'suspended') return;
             const osc = audioCtx.createOscillator(); const gainNode = audioCtx.createGain();
             osc.type = 'sine'; osc.frequency.setValueAtTime(4000 + Math.random() * 2000, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(8000, audioCtx.currentTime + 0.03);
             gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime); gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
-            osc.connect(gainNode); gainNode.connect(audioCtx.destination);
-            osc.start(); osc.stop(audioCtx.currentTime + 0.05);
+            osc.connect(gainNode); gainNode.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.05);
         }
 
-        // 赢家吸金音效
+        function playCardSound() {
+            if (!audioCtx || audioCtx.state === 'suspended') return;
+            const bufferSize = audioCtx.sampleRate * 0.08; const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0); for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+            const noise = audioCtx.createBufferSource(); noise.buffer = buffer;
+            const filter = audioCtx.createBiquadFilter(); filter.type = 'highpass'; filter.frequency.value = 1000;
+            const gain = audioCtx.createGain(); gain.gain.setValueAtTime(0.15, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+            noise.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination); noise.start();
+        }
+
         function playCashSound() {
             if (!audioCtx || audioCtx.state === 'suspended') return;
             const osc = audioCtx.createOscillator(); const gainNode = audioCtx.createGain();
             osc.type = 'triangle'; osc.frequency.setValueAtTime(800, audioCtx.currentTime); osc.frequency.linearRampToValueAtTime(1200, audioCtx.currentTime + 0.1);
             gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime); gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.3);
-            osc.connect(gainNode); gainNode.connect(audioCtx.destination);
-            osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+            osc.connect(gainNode); gainNode.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.3);
         }
 
-        function spawnChips(amount) {
+function spawnChips(amount, visualIdx) {
             const container = document.getElementById('chips-container');
+            
+            // 👉 全新精调坐标：将下注区向边缘推，完美避开中心的公共牌和发牌区
+            const betZones = { 
+                0: { left: 50, top: 78 }, // 自己面前 (靠下，远离 50% 的中心区)
+                1: { left: 20, top: 72 }, // 左下玩家前
+                2: { left: 20, top: 28 }, // 左上玩家前
+                3: { left: 50, top: 22 }, // 对面玩家前 (靠上)
+                4: { left: 80, top: 28 }, // 右上玩家前
+                5: { left: 80, top: 72 }  // 右下玩家前
+            };
+            const zone = betZones[visualIdx] || {left: 50, top: 50};
+            
             const denoms = [ { val: 500, color: '#8e44ad' }, { val: 100, color: '#2c3e50' }, { val: 50, color: '#e74c3c' }, { val: 10, color: '#3498db' }, { val: 1, color: '#ecf0f1' } ];
             let remaining = amount; let chipsToThrow = [];
-            for (let d of denoms) {
-                while (remaining >= d.val) { chipsToThrow.push(d); remaining -= d.val; if(chipsToThrow.length >= 25) break; }
-                if(chipsToThrow.length >= 25) break;
+            
+            for (let d of denoms) { 
+                while (remaining >= d.val) { 
+                    chipsToThrow.push(d); 
+                    remaining -= d.val; 
+                    if(chipsToThrow.length >= 25) break; // 限制一次最多扔 25 个筹码防卡顿
+                } 
+                if(chipsToThrow.length >= 25) break; 
             }
+            
             chipsToThrow.forEach((chip, i) => {
                 setTimeout(() => {
                     const el = document.createElement('div'); el.className = 'chip-token'; el.style.backgroundColor = chip.color;
                     if (chip.val >= 10) el.innerText = chip.val;
-                    const angle = Math.random() * Math.PI * 2; const dist = 30 + Math.random() * 60; 
-                    el.style.left = `calc(50% + ${Math.cos(angle) * dist}px)`; el.style.top = `calc(50% + ${Math.sin(angle) * dist}px)`;
-                    el.style.setProperty('--rot', `${Math.random()*360}deg`);
-                    container.appendChild(el); playChipSound();
+                    
+                    // 👉 缩小散落范围，改用百分比定位，让筹码更聚拢且适应不同屏幕
+                    const scatterX = (Math.random() - 0.5) * 8; // 水平偏移 +/- 4%
+                    const scatterY = (Math.random() - 0.5) * 8; // 垂直偏移 +/- 4%
+                    
+                    el.style.left = `${zone.left + scatterX}%`; 
+                    el.style.top = `${zone.top + scatterY}%`;
+                    el.style.setProperty('--rot', `${Math.random()*360}deg`); // 随机旋转
+                    
+                    container.appendChild(el); 
+                    playChipSound();
                 }, i * 35); 
             });
         }
 
-        // 👉 核心动画：监听结算事件，把桌子上的筹码吸向赢家
+        async function playDealingAnimation(activeVisualIndices) {
+            isDealingAnimationPlaying = true;
+            const deck = document.getElementById('deck-container');
+            const container = document.getElementById('chips-container');
+            const controlBar = document.getElementById('control-bar');
+            
+            if (controlBar) controlBar.style.display = 'none'; 
+
+            const spawnFlyingCard = (targetClass) => {
+                return new Promise(resolve => {
+                    const targetElement = document.querySelector('.' + targetClass);
+                    if (!targetElement) { resolve(); return; }
+                    let targetRect = targetElement.getBoundingClientRect();
+                    if (targetRect.width === 0) { resolve(); return; }
+
+                    const card = document.createElement('div'); card.className = 'card flying-card hidden-bg';
+                    card.style.left = deck.offsetLeft + 'px'; card.style.top = deck.offsetTop + 'px';
+                    card.style.transform = 'translate(-50%, -50%) scale(0.5)'; 
+                    container.appendChild(card); playCardSound();
+                    
+                    setTimeout(() => {
+                        const containerRect = container.getBoundingClientRect();
+                        card.style.left = (targetRect.left - containerRect.left + targetRect.width/2) + 'px';
+                        card.style.top = (targetRect.top - containerRect.top + targetRect.height/2) + 'px';
+                        card.style.transform = 'translate(-50%, -50%) scale(1)';
+                    }, 20);
+                    
+                    setTimeout(() => { 
+                        card.remove(); 
+                        dealtCards.add(targetClass); 
+                        let el = document.querySelector('.' + targetClass);
+                        if (el) el.style.opacity = '1'; 
+                        resolve(); 
+                    }, 320);
+                });
+            };
+
+            try {
+                for (let round = 0; round < 2; round++) {
+                    for (let vIdx of activeVisualIndices) await spawnFlyingCard(`hole-card-anim-${vIdx}-${round}`);
+                }
+                for (let i = 0; i < 5; i++) await spawnFlyingCard(`comm-card-anim-${i}`); 
+            } catch (e) { console.error("动画异常跳过: ", e); }
+
+            isDealingAnimationPlaying = false;
+            if (controlBar) controlBar.style.display = 'flex';
+        }
+
         socket.on('settlePot', (data) => {
             const chips = document.querySelectorAll('.chip-token');
             if (chips.length > 0 && data.winners.length > 0) {
-                // 如果有多人平分，这里特效简单起见全部吸向第一个赢家
                 let visualIdx = getVisualSeatId(data.winners[0]);
                 let avatarEl = document.querySelector(`#seat-${visualIdx} .avatar`);
                 if (avatarEl) {
-                    let targetRect = avatarEl.getBoundingClientRect();
-                    let containerRect = document.getElementById('chips-container').getBoundingClientRect();
-                    let targetX = targetRect.left + targetRect.width / 2 - containerRect.left;
-                    let targetY = targetRect.top + targetRect.height / 2 - containerRect.top;
-
-                    // 将桌上所有的筹码加上过渡动画，飞向目标坐标
-                    chips.forEach((chip, i) => {
-                        setTimeout(() => {
-                            chip.style.transition = 'all 0.5s cubic-bezier(0.25, 0.1, 0.25, 1)';
-                            chip.style.left = targetX + 'px'; chip.style.top = targetY + 'px';
-                            chip.style.transform = 'translate(-50%, -50%) scale(0.2)'; chip.style.opacity = '0';
-                        }, i * 15); 
-                    });
+                    let targetRect = avatarEl.getBoundingClientRect(); let containerRect = document.getElementById('chips-container').getBoundingClientRect();
+                    let targetX = targetRect.left + targetRect.width / 2 - containerRect.left; let targetY = targetRect.top + targetRect.height / 2 - containerRect.top;
+                    chips.forEach((chip, i) => { setTimeout(() => { chip.style.transition = 'all 0.5s cubic-bezier(0.25, 0.1, 0.25, 1)'; chip.style.left = targetX + 'px'; chip.style.top = targetY + 'px'; chip.style.transform = 'translate(-50%, -50%) scale(0.2)'; chip.style.opacity = '0'; }, i * 15); });
                 }
             }
-            
-            // 飘钱特效
             setTimeout(() => {
                 data.winners.forEach(wIdx => {
-                    let vIdx = getVisualSeatId(wIdx);
-                    let seatEl = document.getElementById(`seat-${vIdx}`);
-                    if(seatEl) {
-                        let floatText = document.createElement('div');
-                        floatText.innerText = `+${data.splitPot || data.pot}`;
-                        floatText.className = 'float-money';
-                        seatEl.appendChild(floatText);
-                        setTimeout(() => floatText.remove(), 1500);
-                    }
+                    let vIdx = getVisualSeatId(wIdx); let seatEl = document.getElementById(`seat-${vIdx}`);
+                    if(seatEl) { let floatText = document.createElement('div'); floatText.innerText = `+${data.splitPot || data.pot}`; floatText.className = 'float-money'; seatEl.appendChild(floatText); setTimeout(() => floatText.remove(), 1500); }
                 });
-                playCashSound(); // 叮叮~
-            }, 600); // 等筹码差不多飞完时显示数字
+                playCashSound();
+            }, 600); 
         });
 
         function getVisualSeatId(serverSeatIdx) { if (mySeatIndex === -1) return serverSeatIdx; return (serverSeatIdx - mySeatIndex + 6) % 6; }
         function toggleSeat(visualIdx) { const panel = document.getElementById(`seat-${visualIdx}`).querySelector('.player-panel'); if (expandedSeats.has(visualIdx)) { expandedSeats.delete(visualIdx); if (panel) panel.classList.remove('expanded'); } else { expandedSeats.add(visualIdx); if (panel) panel.classList.add('expanded'); } }
         function toggleMyCards() { isMyCardsPeeked = !isMyCardsPeeked; document.querySelectorAll('.my-card-container').forEach(el => { if (isMyCardsPeeked) el.classList.add('peeked'); else el.classList.remove('peeked'); }); }
         
-        // 生成扑克牌
-        function createCardHTML(cardData, isMine = false, isShowdown = false) {
-            if (cardData === 'hidden' || !cardData) return `<div class="card hidden-bg"></div>`;
-            const isRed = cardData.suit === '♥️' || cardData.suit === '♦️';
-            // 如果是自己的牌，默认渲染翻转结构
-            if (isMine) {
-                const peekClass = isMyCardsPeeked ? 'peeked' : '';
-                return `<div class="card flip-container my-card-container ${peekClass}" onclick="toggleMyCards()">
-                            <div class="flip-inner"><div class="flip-front"></div><div class="flip-back ${isRed ? 'red' : ''}">${cardData.suit}${cardData.rank}</div></div>
-                        </div>`;
-            }
-            // 别人的牌（如果能看到就是翻开了）
-            return `<div class="card ${isRed ? 'red' : ''}">${cardData.suit}${cardData.rank}</div>`;
+        function createFlippableCardHTML(cardData, isMine = false, forceFaceDown = false, extraClass = '', extraStyle = '', isNewlyRevealed = false) {
+            let innerContent = '';
+            if (forceFaceDown || !cardData || cardData === 'hidden') { innerContent = `<div class="flip-front"></div><div class="flip-back hidden-bg"></div>`; } 
+            else { const isRed = cardData.suit === '♥️' || cardData.suit === '♦️'; innerContent = `<div class="flip-front"></div><div class="flip-back ${isRed ? 'red' : ''}">${cardData.suit}${cardData.rank}</div>`; }
+            let peekClass = '';
+            if (!forceFaceDown && cardData && cardData !== 'hidden' && !isMine) { if (!isNewlyRevealed) peekClass = 'peeked'; }
+            const myClass = isMine ? 'my-card-container ' + (isMyCardsPeeked ? 'peeked' : '') : '';
+            const clickEvent = isMine ? 'onclick="toggleMyCards()"' : '';
+            return `<div class="card flip-container ${myClass} ${peekClass} ${extraClass}" style="${extraStyle}" ${clickEvent}><div class="flip-inner">${innerContent}</div></div>`;
         }
         
         function joinGame() { initAudio(); const name = document.getElementById('username').value; const pwd = document.getElementById('password').value; if (name && pwd) socket.emit('login', {username: name, password: pwd}); else document.getElementById('login-error-msg').innerText = "账号或密码不能为空！"; }
@@ -264,19 +330,61 @@
         socket.on('passwordChangeFailed', (msg) => { alert(msg); });
 
         socket.on('updateTable', (data) => {
-            if (data.gameState === 'waiting') isMyCardsPeeked = false; 
+            let triggerDealAnim = false;
+            if (lastGameState === 'waiting' && data.gameState === 'pre-flop') {
+                triggerDealAnim = true;
+                isDealingAnimationPlaying = true;
+                dealtCards.clear(); 
+            }
+            lastGameState = data.gameState;
 
-            // 处理奖池金额变化
-            if (data.pot === 0 && previousPot > 0) document.getElementById('chips-container').innerHTML = '';
-            let betAmount = data.pot - previousPot;
-            if (betAmount > 0) spawnChips(betAmount);
-            previousPot = data.pot;
+            if (data.gameState === 'waiting') {
+                isMyCardsPeeked = false; 
+                previousCommunityCount = 0;
+                document.getElementById('chips-container').innerHTML = ''; 
+            }
+
+            let newCommCount = data.communityCards.length;
+            let newlyRevealedIndices = [];
+            if (newCommCount > previousCommunityCount && data.gameState !== 'waiting') {
+                for(let i = previousCommunityCount; i < newCommCount; i++) newlyRevealedIndices.push(i);
+            }
+            previousCommunityCount = newCommCount;
+
+            // 👉 核心修改 2：通过对比【账户总资产的变化】来精确捕获任何一次下注
+            for(let i = 0; i < 6; i++) {
+                const p = data.seats[i];
+                if(p) {
+                    // 如果该玩家存在历史余额记录，并且游戏不在等待阶段
+                    if(previousChips[p.id] !== undefined && data.gameState !== 'waiting') {
+                        // 余额差额 = 上次余额 - 本次余额
+                        let spent = previousChips[p.id] - p.chips;
+                        // 只要余额减少，就证明他一定掏钱扔到了桌子上！
+                        if(spent > 0) {
+                            spawnChips(spent, getVisualSeatId(i));
+                        }
+                    }
+                    // 更新历史余额记录
+                    previousChips[p.id] = p.chips;
+                }
+            }
 
             document.getElementById('pot-display').innerText = data.pot;
             const stageNames = { 'waiting': '等待开始...', 'pre-flop': '翻牌前', 'flop': '翻牌圈', 'turn': '转牌圈', 'river': '河牌圈', 'showdown': '🚨 玩家亮牌对峙！ 🚨' };
             document.getElementById('stage-display').innerText = stageNames[data.gameState];
             
-            const boardHTML = data.communityCards.map(c => createCardHTML(c, false, false)).join('');
+            let boardHTML = '';
+            for (let i = 0; i < 5; i++) {
+                if (data.gameState === 'waiting') boardHTML += `<div class="card-slot"></div>`;
+                else { 
+                    let cData = data.communityCards[i]; 
+                    let isNew = newlyRevealedIndices.includes(i);
+                    let targetClass = `comm-card-anim-${i}`;
+                    let extraClass = targetClass + ' ' + (isNew ? 'needs-flip' : '');
+                    let extraStyle = (isDealingAnimationPlaying && !dealtCards.has(targetClass)) ? 'opacity:0;' : 'opacity:1;'; 
+                    boardHTML += createFlippableCardHTML(cData, false, !cData, extraClass, extraStyle, isNew); 
+                }
+            }
             document.getElementById('community-cards-container').innerHTML = boardHTML;
             
             for (let i = 0; i < 6; i++) {
@@ -286,7 +394,12 @@
                 let holeCardsHTML = '';
                 if (player.holeCards && player.holeCards.length > 0) {
                     let isMine = (i === mySeatIndex);
-                    holeCardsHTML = `<div class="hole-cards">${player.holeCards.map(c => createCardHTML(c, isMine, false)).join('')}</div>`;
+                    holeCardsHTML = `<div class="hole-cards">` + 
+                        player.holeCards.map((c, idx) => {
+                            let targetClass = `hole-card-anim-${visualIdx}-${idx}`;
+                            let extraStyle = (isDealingAnimationPlaying && !dealtCards.has(targetClass)) ? 'opacity:0;' : 'opacity:1;';
+                            return createFlippableCardHTML(c, isMine, false, targetClass, extraStyle);
+                        }).join('') + `</div>`;
                 }
 
                 const isTurn = (data.currentTurnSeatIdx === i) ? 'active-turn' : '';
@@ -296,32 +409,23 @@
                 let roleHTML = ''; if (player.role === '庄') roleHTML = `<div class="role-badge dealer">D</div>`; else if (player.role === '小盲') roleHTML = `<div class="role-badge sb">SB</div>`; else if (player.role === '大盲') roleHTML = `<div class="role-badge bb">BB</div>`;
                 
                 seatDiv.innerHTML = `
-                    ${holeCardsHTML}
                     <div class="player-panel ${isTurn} ${isExpanded}" onclick="toggleSeat(${visualIdx})">
                         ${crownHTML} ${roleHTML}
                         <div class="player-basic"><div class="avatar">${player.avatar}</div><div class="chips">💰 ${player.chips}</div></div>
                         <div class="player-details"><div class="details-avatar">${player.avatar}</div><div class="details-name" style="color:${statusColor}">${player.username} ${player.status==='folded'?'(弃牌)':''}</div><div class="details-info">资产: <span>💰 ${player.chips}</span><br>本轮: <span>💵 ${player.roundBet}</span></div></div>
                     </div>
+                    ${holeCardsHTML}
                 `;
             }
             
             const bar = document.getElementById('control-bar'); bar.innerHTML = ''; 
             const me = data.seats[mySeatIndex]; if (!me) return;
             
-            // 👉 新增阶段判断逻辑
-            if ((data.gameState === 'waiting') && !me.isReady) {
-                bar.innerHTML = `<button style="background:#2ecc71;color:white;" onclick="initAudio(); socket.emit('ready')">✅ 准备开始</button>`;
-            } 
-            else if ((data.gameState === 'waiting') && me.isReady) {
-                bar.innerHTML = `<span style="color:#2ecc71; font-size:18px;">✅ 等待其他人...</span>`;
-            }
-            // 👉 在 Showdown 阶段，渲染“展示手牌”按钮
+            if ((data.gameState === 'waiting') && !me.isReady) { bar.innerHTML = `<button style="background:#2ecc71;color:white;" onclick="initAudio(); socket.emit('ready')">✅ 准备开始</button>`; } 
+            else if ((data.gameState === 'waiting') && me.isReady) { bar.innerHTML = `<span style="color:#2ecc71; font-size:18px;">✅ 等待其他人...</span>`; }
             else if (data.gameState === 'showdown' && me.status === 'playing') {
-                if (!me.hasRevealed) {
-                    bar.innerHTML = `<button style="background:#e67e22;color:white;box-shadow: 0 0 15px #e67e22; font-size: 20px;" onclick="socket.emit('revealCards')">🃏 亮出你的底牌！</button>`;
-                } else {
-                    bar.innerHTML = `<span style="color:#e67e22; font-size:18px;">👀 等待其他对手亮牌...</span>`;
-                }
+                if (!me.hasRevealed) bar.innerHTML = `<button style="background:#e67e22;color:white;box-shadow: 0 0 15px #e67e22; font-size: 20px;" onclick="socket.emit('revealCards')">🃏 亮出你的底牌！</button>`;
+                else bar.innerHTML = `<span style="color:#e67e22; font-size:18px;">👀 等待其他对手亮牌...</span>`;
             }
             else if (data.gameState !== 'waiting' && data.gameState !== 'showdown' && data.currentTurnSeatIdx === mySeatIndex) {
                 let callDiff = data.currentHighestBet - me.roundBet; 
@@ -330,6 +434,23 @@
                 else if (me.chips > callDiff) bar.innerHTML += `<button style="background:#3498db;color:white;" onclick="socket.emit('playerAction', {type: 'call'})">💵 跟注 (补 ${callDiff})</button>`;
                 if (me.chips > callDiff + 50) bar.innerHTML += `<button style="background:#e74c3c;color:white;" onclick="socket.emit('playerAction', {type: 'raise', amount: 50})">🔥 加注 (再加 50)</button>`;
                 if (me.chips > 0) bar.innerHTML += `<button style="background:#8e44ad;color:white;box-shadow: 0 0 10px #8e44ad;" onclick="socket.emit('playerAction', {type: 'all-in'})">🌋 All-In (${me.chips})</button>`;
+            }
+
+            if ((triggerDealAnim || isDealingAnimationPlaying) && bar) { bar.style.display = 'none'; } else if (bar) { bar.style.display = 'flex'; }
+
+            if (newlyRevealedIndices.length > 0) {
+                let delay = 50;
+                newlyRevealedIndices.forEach((idx) => {
+                    setTimeout(() => {
+                        let el = document.querySelector(`.comm-card-anim-${idx}`);
+                        if (el) { el.classList.add('peeked'); el.classList.remove('needs-flip'); playCardSound(); }
+                    }, delay); delay += 200; 
+                });
+            }
+
+            if (triggerDealAnim) {
+                let activeVisualIndices = data.seats.map((s, i) => s && s.status === 'playing' ? getVisualSeatId(i) : -1).filter(v => v !== -1);
+                playDealingAnimation(activeVisualIndices);
             }
         });
         

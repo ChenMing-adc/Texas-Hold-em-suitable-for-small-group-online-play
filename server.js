@@ -7,19 +7,13 @@ const fs = require('fs');
 
 app.use(express.static(__dirname));
 
-
-// ==========================================
-// 0. 本地数据库管理
-// （从这里往下，你原来的代码一行都不用改！）
-// ==========================================
-
 // ==========================================
 // 0. 本地数据库管理
 // ==========================================
 const USERS_FILE = 'users.json';
 function loadUsers() {
     try { return JSON.parse(fs.readFileSync(USERS_FILE, 'utf8')); } 
-    catch (err) { console.error("读取 users.json 失败，请确保文件存在！"); return {}; }
+    catch (err) { return {}; }
 }
 function saveUsers(data) { fs.writeFileSync(USERS_FILE, JSON.stringify(data, null, 2)); }
 
@@ -81,7 +75,6 @@ function nextStage() {
         resetRoundBets(); 
 
         seats.forEach(p => { 
-            // 👉 新增 hasRevealed 状态，控制亮牌
             if (p && p.isReady) { p.holeCards = [currentDeck.pop(), currentDeck.pop()]; p.status = 'playing'; p.isReady = false; p.isWinner = false; p.hasRevealed = false; }
         });
 
@@ -98,32 +91,39 @@ function nextStage() {
     else if (gameState === 'pre-flop') { gameState = 'flop'; resetRoundBets(); currentDeck.pop(); communityCards.push(currentDeck.pop(), currentDeck.pop(), currentDeck.pop()); io.emit('chatMessage', { user: '📢 裁判', text: '进入翻牌圈 (Flop)！' }); } 
     else if (gameState === 'flop') { gameState = 'turn'; resetRoundBets(); currentDeck.pop(); communityCards.push(currentDeck.pop()); io.emit('chatMessage', { user: '📢 裁判', text: '进入转牌圈 (Turn)！' }); } 
     else if (gameState === 'turn') { gameState = 'river'; resetRoundBets(); currentDeck.pop(); communityCards.push(currentDeck.pop()); io.emit('chatMessage', { user: '📢 裁判', text: '进入河牌圈 (River)！' }); } 
-    // 👉 核心修改：进入 showdown 阶段时不直接结算，等待玩家亮牌
     else if (gameState === 'river') { gameState = 'showdown'; }
     
+    // 👉 防奔溃修改：增加 null 判断，跳过掉线的空位
     if (gameState !== 'pre-flop' && gameState !== 'showdown' && gameState !== 'waiting') {
         currentTurnIndex = 0;
         let loopCount = 0;
-        while((seats[playerOrder[currentTurnIndex]].status !== 'playing' || seats[playerOrder[currentTurnIndex]].chips === 0) && loopCount < playerOrder.length) {
-            currentTurnIndex = (currentTurnIndex + 1) % playerOrder.length; loopCount++;
+        while(loopCount < playerOrder.length && 
+             (!seats[playerOrder[currentTurnIndex]] || 
+              seats[playerOrder[currentTurnIndex]].status !== 'playing' || 
+              seats[playerOrder[currentTurnIndex]].chips === 0)) {
+            currentTurnIndex = (currentTurnIndex + 1) % playerOrder.length; 
+            loopCount++;
         }
         if (loopCount >= playerOrder.length) { setTimeout(nextStage, 1000); return; }
     }
     broadcastTable();
 }
 
-// 👉 核心修改：结算时触发动画事件，延迟给钱
+// 👉 修改点 1：替换 evaluateWinner 函数，加入破产判定
 function evaluateWinner() {
-    let activePlayers = playerOrder.filter(idx => seats[idx].status === 'playing');
+    let activePlayers = playerOrder.filter(idx => seats[idx] && seats[idx].status === 'playing');
     if (activePlayers.length === 1) {
         let winner = seats[activePlayers[0]]; 
         io.emit('chatMessage', { user: '🏆 战报', text: `其他人都弃牌了，【${winner.username}】赢走 ${pot} 筹码！` });
-        // 通知前端播放筹码飞行动画
         io.emit('settlePot', { winners: [activePlayers[0]], splitPot: pot });
         setTimeout(() => {
             winner.chips += pot; winner.isWinner = true;
-            pot = 0; gameState = 'waiting'; broadcastTable();
-        }, 2500); // 等待动画飞完
+            pot = 0; gameState = 'waiting'; 
+            
+            // 核心新增：结算时，清算破产玩家，打入观战席
+            seats.forEach(p => { if (p && p.chips <= 0) p.status = 'spectator'; });
+            broadcastTable();
+        }, 2500);
         return;
     }
 
@@ -140,12 +140,15 @@ function evaluateWinner() {
     if(hands.length > 0) {
         let winners = Hand.winners(hands); let splitPot = Math.floor(pot / winners.length);
         io.emit('chatMessage', { user: '🏆 战报', text: `胜者: ${winners.map(w=>w.playerName).join(', ')} (${winners[0].descr})` });
-        
         io.emit('settlePot', { winners: winners.map(w => w.seatIdx), splitPot: splitPot });
         
         setTimeout(() => {
             winners.forEach(w => { seats[w.seatIdx].chips += splitPot; seats[w.seatIdx].isWinner = true; });
-            pot = 0; gameState = 'waiting'; broadcastTable();
+            pot = 0; gameState = 'waiting'; 
+            
+            // 核心新增：结算时，清算破产玩家，打入观战席
+            seats.forEach(p => { if (p && p.chips <= 0) p.status = 'spectator'; });
+            broadcastTable();
         }, 2500);
     }
 }
@@ -154,7 +157,6 @@ function broadcastTable() {
     io.sockets.sockets.forEach((socket) => {
         let safeSeats = seats.map((p, i) => {
             if (!p) return null;
-            // 👉 修改点：只有玩家主动亮牌，或者是我自己的牌，才发真实数据
             let showRealCards = (p.hasRevealed) || (p.id === socket.id);
             let role = '';
             if (gameState !== 'waiting' && gameState !== 'showdown') {
@@ -163,7 +165,7 @@ function broadcastTable() {
             return {
                 id: p.id, username: p.username, avatar: p.avatar, chips: p.chips,
                 status: p.status, isReady: p.isReady, isWinner: p.isWinner, role: role, roundBet: p.roundBet || 0,
-                hasRevealed: p.hasRevealed, // 同步亮牌状态
+                hasRevealed: p.hasRevealed, 
                 holeCards: showRealCards ? p.holeCards : (p.holeCards.length > 0 ? ['hidden', 'hidden'] : [])
             };
         });
@@ -187,7 +189,6 @@ io.on('connection', (socket) => {
         let emptySeatIdx = seats.findIndex(s => s === null);
         if (emptySeatIdx === -1) return socket.emit('loginError', '房间已满！');
         
-        // 👉 新增 hasRevealed 属性
         seats[emptySeatIdx] = { id: socket.id, username: username, avatar: avatars[emptySeatIdx%6], chips: 1000, status: 'waiting', isReady: false, isWinner: false, hasRevealed: false, holeCards: [], roundBet: 0, acted: false };
         socket.seatIdx = emptySeatIdx; socket.username = username; 
         socket.emit('loginSuccess', emptySeatIdx); broadcastTable();
@@ -208,25 +209,23 @@ io.on('connection', (socket) => {
         if (activePlayers.length >= 2 && activePlayers.every(p => p.isReady)) { gameState = 'waiting'; nextStage(); } else broadcastTable();
     });
 
-    // 👉 新增：处理玩家点击“展示手牌”
     socket.on('revealCards', () => {
         if (gameState !== 'showdown') return;
         let p = seats[socket.seatIdx];
         if (p && p.status === 'playing' && !p.hasRevealed) {
             p.hasRevealed = true;
             io.emit('chatBubble', { seatIdx: socket.seatIdx, text: '亮牌！🃏' });
-            
-            // 检查是否所有没弃牌的人都亮了牌
-            let activePlayers = playerOrder.filter(idx => seats[idx].status === 'playing');
+            let activePlayers = playerOrder.filter(idx => seats[idx] && seats[idx].status === 'playing');
             let allRevealed = activePlayers.every(idx => seats[idx].hasRevealed);
-            
-            if (allRevealed) evaluateWinner(); // 如果全亮了，才开始飞筹码结算！
+            if (allRevealed) evaluateWinner(); 
             else broadcastTable();
         }
     });
 
     socket.on('playerAction', (action) => {
         let p = seats[socket.seatIdx];
+        // 👉 防穿透修改：严格校验当前玩家是否真在局内
+        if (!p || p.status !== 'playing') return;
         if (gameState === 'waiting' || gameState === 'showdown' || socket.seatIdx !== playerOrder[currentTurnIndex]) return;
 
         if (action.type === 'fold') { p.status = 'folded'; p.acted = true; io.emit('chatBubble', { seatIdx: socket.seatIdx, text: '弃牌 🏳️' }); } 
@@ -242,9 +241,9 @@ io.on('connection', (socket) => {
             io.emit('chatBubble', { seatIdx: socket.seatIdx, text: `梭哈 All-In! 🌋` });
         }
 
-        let playingPlayers = playerOrder.map(idx => seats[idx]).filter(s => s.status === 'playing');
+        let playingPlayers = playerOrder.map(idx => seats[idx]).filter(s => s && s.status === 'playing');
         if (playingPlayers.length <= 1) { 
-            gameState = 'showdown'; evaluateWinner(); return; // 只有1人幸存，直接结算赢钱
+            gameState = 'showdown'; evaluateWinner(); return; 
         }
         
         let allActed = playingPlayers.every(s => s.acted === true || s.chips === 0);
@@ -252,12 +251,37 @@ io.on('connection', (socket) => {
         else { 
             let loopCount = 0;
             do { currentTurnIndex = (currentTurnIndex + 1) % playerOrder.length; loopCount++; } 
-            while ((seats[playerOrder[currentTurnIndex]].status !== 'playing' || seats[playerOrder[currentTurnIndex]].acted === true || seats[playerOrder[currentTurnIndex]].chips === 0) && loopCount < playerOrder.length); 
+            while (loopCount < playerOrder.length && (!seats[playerOrder[currentTurnIndex]] || seats[playerOrder[currentTurnIndex]].status !== 'playing' || seats[playerOrder[currentTurnIndex]].acted === true || seats[playerOrder[currentTurnIndex]].chips === 0)); 
             if (loopCount >= playerOrder.length) nextStage(); else broadcastTable(); 
         }
     });
 
-    socket.on('disconnect', () => { if (socket.seatIdx !== undefined) { seats[socket.seatIdx] = null; broadcastTable(); } });
+    // 👉 掉线保护：掉线时自动将轮次平滑移交给下一位
+    socket.on('disconnect', () => { 
+        if (socket.seatIdx !== undefined) { 
+            let wasMyTurn = (gameState !== 'waiting' && gameState !== 'showdown' && playerOrder[currentTurnIndex] === socket.seatIdx);
+            seats[socket.seatIdx] = null; 
+            
+            if (gameState !== 'waiting' && gameState !== 'showdown') {
+                let playingPlayers = playerOrder.map(idx => seats[idx]).filter(s => s && s.status === 'playing');
+                if (playingPlayers.length <= 1) {
+                    gameState = 'showdown'; evaluateWinner(); return;
+                }
+                if (wasMyTurn) {
+                    let allActed = playingPlayers.every(s => s.acted === true || s.chips === 0);
+                    if (allActed) { nextStage(); } 
+                    else {
+                        let loopCount = 0;
+                        do { currentTurnIndex = (currentTurnIndex + 1) % playerOrder.length; loopCount++; } 
+                        while (loopCount < playerOrder.length && (!seats[playerOrder[currentTurnIndex]] || seats[playerOrder[currentTurnIndex]].status !== 'playing' || seats[playerOrder[currentTurnIndex]].acted === true || seats[playerOrder[currentTurnIndex]].chips === 0)); 
+                        if (loopCount >= playerOrder.length) nextStage(); else broadcastTable(); 
+                    }
+                    return; 
+                }
+            }
+            broadcastTable(); 
+        } 
+    });
 });
 
 http.listen(3000, () => { console.log('🚀 巅峰德州引擎启动！'); });
