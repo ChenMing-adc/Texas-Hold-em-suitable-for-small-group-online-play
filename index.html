@@ -11,11 +11,10 @@
             background-color: #1a1a2e; 
             color: white; 
             margin: 0; 
-            /* 👇 关键修改：锁定尺寸，防止任何形式的滚动 */
             width: 100vw;
-            height: 100dvh; /* dvh 是动态视口高度，完美避开手机上下导航栏 */
+            height: 100dvh;
             overflow: hidden; 
-            position: fixed; /* 彻底死锁在屏幕上 */
+            position: fixed; 
             top: 0; 
             left: 0;
             touch-action: none; 
@@ -28,18 +27,12 @@
         .modal input { display: block; width: 80%; margin: 10px auto; padding: 10px; border-radius: 5px; border: none; }
         .modal button { margin-top: 15px; background: #2ecc71; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;}
         #btn-close-modal { background: #95a5a6; margin-left: 10px; }
-        #game-screen { 
-            display: none; 
-            width: 100%; 
-            height: 100%; /* 继承 body 的绝对安全尺寸 */
-            position: relative; 
-        }
+        #game-screen { display: none; width: 100%; height: 100%; position: relative; }
         
         #pot-container { position: fixed; top: 20px; left: 20px; z-index: 100; background: rgba(22, 33, 62, 0.85); padding: 10px 20px; border-radius: 15px; border: 2px solid #f1c40f; box-shadow: 0 5px 20px rgba(0,0,0,0.6); display: flex; flex-direction: column; gap: 5px; }
         .pot { font-size: clamp(16px, 2.5vw, 24px); color: #f1c40f; font-weight: bold; }
         .stage { color: #ecf0f1; font-size: clamp(12px, 1.8vw, 16px); opacity: 0.9;}
 
-        /* 👉 排行榜 CSS */
         #leaderboard-container { position: fixed; top: 90px; left: 20px; z-index: 100; background: rgba(22, 33, 62, 0.85); padding: 10px; border-radius: 12px; border: 2px solid #3498db; box-shadow: 0 5px 20px rgba(0,0,0,0.6); color: white; width: 180px; pointer-events: none; }
         .lb-title { font-weight: bold; margin-bottom: 5px; text-align: center; color: #3498db; font-size: 14px; }
         .lb-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 12px; }
@@ -111,45 +104,29 @@
         #chat-input-area input { padding: 10px; border-radius: 20px; border: none; outline: none; width: 150px;}
         #chat-input-area button { padding: 10px 15px; border-radius: 20px; border: none; background: #3498db; color: white; cursor: pointer;}
 
-@media (max-width: 768px) {
-            /* 桌子稍微改窄一点点 (80vw)，给左右两边的座位留出物理空间 */
+        @media (max-width: 768px) {
             .poker-table { width: 80vw; height: 120vw; max-height: 55vh; border-radius: 120px; }
-            
             #pot-container { top: 10px; left: 10px; padding: 5px 10px; }
             .pot { font-size: 14px; } .stage { font-size: 12px; }
             #deck-container { top: 15%; left: 50%; } 
-            
-            /* 👇 关键修改：座位向内聚拢，避免把屏幕撑破 */
-            .seat-1 { top: 75%; left: 5%; }  /* 原来是 0% */
-            .seat-2 { top: 25%; left: 5%; }  /* 原来是 0% */
-            .seat-4 { top: 25%; left: 95%; } /* 原来是 100% */
-            .seat-5 { top: 75%; left: 95%; } /* 原来是 100% */
-            
-            /* 控制栏改为 100% 宽度并使用内边距，防止因为按钮太多撑爆屏幕 */
-            #control-bar { width: 100vw; flex-wrap: wrap; justify-content: center; bottom: 5px; padding: 5px; box-sizing: border-box; }
-            #control-bar button { padding: 8px 5px; font-size: 14px; flex: 1 1 45%; margin: 2px; } 
-            
-            /* 聊天框改为弹性布局，自适应剩余宽度 */
+            .seat-1 { top: 75%; left: 5%; } 
+            .seat-2 { top: 25%; left: 5%; } 
+            .seat-4 { top: 25%; left: 95%; } 
+            .seat-5 { top: 75%; left: 95%; } 
+            #control-bar { width: 100vw; flex-wrap: nowrap; justify-content: center; bottom: 5px; padding: 5px; box-sizing: border-box; }
+            #control-bar button { padding: 8px 5px; font-size: 14px; flex: 1 1 auto; margin: 2px; } 
             #chat-input-area { bottom: 85px; top: auto; left: 5vw; width: 90vw; justify-content: space-between; transform: none; box-sizing: border-box;} 
             #chat-input-area input { flex: 1; min-width: 0; padding: 8px; margin: 0 5px; }
             #chat-input-area button, #btn-quick-chat { padding: 8px 10px; font-size: 13px; white-space: nowrap; }
-            
             #top-bar { top: 10px; right: 10px; }
             #top-bar button { padding: 6px 10px; font-size: 12px; }
         }
 
-        /* 快捷按钮样式 */
         #btn-quick-chat { background: #e67e22; color: white; }
-        
-        /* 快捷消息面板样式 */
         #quick-chat-menu { display: none; position: absolute; bottom: 100%; left: 0; background: rgba(22, 33, 62, 0.95); border: 2px solid #3498db; border-radius: 10px; padding: 10px; flex-direction: column; gap: 8px; min-width: 220px; margin-bottom: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.8); max-height: 250px; overflow-y: auto; z-index: 101; }
         .quick-chat-item { background: #2c3e50; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; text-align: left; transition: background 0.2s; font-size: 14px; }
         .quick-chat-item:hover { background: #3498db; }
-        
-        /* 移动端适配快捷菜单 */
-        @media (max-width: 768px) {
-            #quick-chat-menu { left: 50%; transform: translateX(-50%); min-width: 200px; }
-        }
+        @media (max-width: 768px) { #quick-chat-menu { left: 50%; transform: translateX(-50%); min-width: 200px; } }
     </style>
 </head>
 <body>
@@ -198,7 +175,6 @@
             <button id="btn-quick-chat" onclick="toggleQuickChat()">💬 快捷</button>
             <input type="text" id="chat-input" placeholder="嘲讽一下...">
             <button onclick="sendChat()">发送</button>
-            
             <div id="quick-chat-menu"></div>
         </div>
         <div id="control-bar"></div>
@@ -208,28 +184,20 @@
     <script>
         const socket = io();
 
-        // 监听回车键发送
         window.addEventListener('DOMContentLoaded', () => {
-            initQuickChat(); // 这是你上一步加的初始化语音菜单
-            
-            // 👇 新增：给输入框绑定回车事件
+            initQuickChat(); 
             const chatInput = document.getElementById('chat-input');
             if (chatInput) {
                 chatInput.addEventListener('keypress', function (e) {
-                    if (e.key === 'Enter') {
-                        e.preventDefault(); // 防止某些浏览器回车自带的奇怪行为
-                        sendChat(); // 触发增强版的发送函数
-                    }
+                    if (e.key === 'Enter') { e.preventDefault(); sendChat(); }
                 });
             }
         });
 
-        // 👇 聊天冷却相关设置
         let isChatCooldown = false;
-        const CHAT_COOLDOWN_TIME = 3000; // 冷却时间：3000毫秒（即3秒），你可以随时调
-        // ==========================================
-        // 👇 在这里配置你的快捷消息和对应语音包！ 👇
-        // ==========================================
+        const CHAT_COOLDOWN_TIME = 3000; 
+
+        // 快捷语音配置
         const quickChatConfig = [
             { text: "快点吧，我等到花儿都谢了！", audioUrl: "./audio/配音文件.mp3" },
             { text: "交个朋友吧，加个微信？", audioUrl: "./audio/2.mp3" },
@@ -238,59 +206,40 @@
             { text: "赢了会所嫩模，输了下海干活！", audioUrl: "./audio/5.mp3" },
             { text: "我要验牌！", audioUrl: "./audio/6.mp3" ,volume: 0.6 },
             { text: "给我擦皮鞋！", audioUrl: "./audio/7.mp3" }
-            // 💡 教学：按照上面的格式，复制一行，改掉 text(文字) 和 audioUrl(音频路径) 即可。
-            // 💡 提示：你需要自己在项目文件夹下建一个 audio 文件夹，把 mp3 丢进去。
         ];
-        // ==========================================
 
-        // 初始化预加载音频
         const audioCache = {};
         function initQuickChat() {
             const menu = document.getElementById('quick-chat-menu');
             quickChatConfig.forEach(item => {
-            // 加载音频对象
                 if (item.audioUrl) {
                     let audio = new Audio(item.audioUrl);
-                    // 👇 新增这一行：如果配置了 volume 就用配置的，没配置就默认 1.0 (最大)
                     audio.volume = item.volume !== undefined ? item.volume : 1.0; 
                     audioCache[item.text] = audio;
                 }
-                // 生成菜单按钮
                 let btn = document.createElement('button');
                 btn.className = 'quick-chat-item';
                 btn.innerText = item.text;
-                // 修改快捷菜单的点击事件
                 btn.onclick = () => {
-                    if (!isChatCooldown) {
-                        sendChat(item.text); // 调用新版发送函数，直接传文本
-                        toggleQuickChat();   // 发完自动收起菜单
-                    } else {
-                        // 如果冷却中，给按钮一个变红的视觉反馈
+                    if (!isChatCooldown) { sendChat(item.text); toggleQuickChat(); } 
+                    else {
                         const oldBg = btn.style.background;
                         btn.style.background = '#e74c3c';
                         btn.innerText = '⏳ 冷却中...';
-                        setTimeout(() => {
-                            btn.style.background = ''; // 恢复原样
-                            btn.innerText = item.text;
-                        }, 1000);
+                        setTimeout(() => { btn.style.background = ''; btn.innerText = item.text; }, 1000);
                     }
                 };
                 menu.appendChild(btn);
             });
         }
 
-        // 切换菜单显示/隐藏
         function toggleQuickChat() {
             const menu = document.getElementById('quick-chat-menu');
             menu.style.display = (menu.style.display === 'flex') ? 'none' : 'flex';
         }
-        
-        // 页面启动时执行初始化
-        window.addEventListener('DOMContentLoaded', initQuickChat);
 
         let mySeatIndex = -1; let expandedSeats = new Set(); let isMyCardsPeeked = false;
         let audioCtx; 
-        
         let lastGameState = 'waiting'; let isDealingAnimationPlaying = false; 
         let previousChips = {}; let previousCommunityCount = 0; let dealtCards = new Set(); 
 
@@ -389,7 +338,6 @@
             const stageNames = { 'waiting': '等待开始...', 'pre-flop': '翻牌前', 'flop': '翻牌圈', 'turn': '转牌圈', 'river': '河牌圈', 'showdown': '🚨 玩家亮牌对峙！ 🚨' };
             document.getElementById('stage-display').innerText = stageNames[data.gameState];
             
-            // 👉 排行榜渲染
             let lbHTML = `<div class="lb-title">🏆 财富榜</div><table class="lb-table"><tr><th>玩家</th><th>资产</th><th>欠款</th></tr>`;
             let activePlayers = data.seats.filter(s => s !== null).sort((a,b) => (b.chips - b.debt) - (a.chips - a.debt));
             activePlayers.forEach(p => { lbHTML += `<tr><td>${p.username}</td><td>${p.chips}</td><td style="color:#e74c3c;">${p.debt > 0 ? p.debt : '0'}</td></tr>`; });
@@ -423,11 +371,14 @@
                 const crownHTML = player.isWinner ? `<div class="crown">👑</div>` : '';
                 let roleHTML = ''; if (player.role === '庄') roleHTML = `<div class="role-badge dealer">D</div>`; else if (player.role === '小盲') roleHTML = `<div class="role-badge sb">SB</div>`; else if (player.role === '大盲') roleHTML = `<div class="role-badge bb">BB</div>`;
                 
-                let statusText = ''; if (player.status === 'folded') statusText = '(弃牌)'; else if (player.status === 'spectator') statusText = '(观战)';
-                const statusColor = player.isReady ? '#2ecc71' : (player.status === 'folded' ? '#e74c3c' : (player.status === 'spectator' ? '#7f8c8d' : '#bdc3c7'));
-                const avatarOpacity = player.status === 'spectator' ? '0.5' : '1'; 
+                let statusText = ''; 
+                if (player.isDisconnected) statusText = '🔌 掉线中';
+                else if (player.status === 'folded') statusText = '(弃牌)'; 
+                else if (player.status === 'spectator') statusText = '(观战)';
 
-                // 👉 更新弹出名片：加入借贷信息
+                const statusColor = player.isDisconnected ? '#e67e22' : (player.isReady ? '#2ecc71' : (player.status === 'folded' ? '#e74c3c' : (player.status === 'spectator' ? '#7f8c8d' : '#bdc3c7')));
+                const avatarOpacity = (player.status === 'spectator' || player.isDisconnected) ? '0.5' : '1'; 
+
                 seatDiv.innerHTML = `
                     <div class="player-panel ${isTurn} ${isExpanded}" onclick="toggleSeat(${visualIdx})">
                         ${crownHTML} ${roleHTML}
@@ -442,7 +393,6 @@
             const bar = document.getElementById('control-bar'); bar.innerHTML = ''; 
             const me = data.seats[mySeatIndex]; if (!me) return;
             
-            // 👉 操作栏判断：借款与还款
             if (me.status === 'spectator') {
                 bar.innerHTML = `<span style="color:#95a5a6; font-size:18px; font-weight:bold;">👀 观战中</span>
                                  <button style="background:#e74c3c;color:white; margin-left:15px; box-shadow: 0 0 10px #e74c3c;" onclick="initAudio(); socket.emit('borrow')">🏦 借款 1000</button>`;
@@ -457,7 +407,6 @@
                 bar.innerHTML = `<span style="color:#2ecc71; font-size:18px;">✅ 等待其他人...</span>`; 
             }
             else if (data.gameState !== 'waiting' && me.status === 'waiting') {
-                // 如果是游戏中途刚借完钱，让他耐心等这局结束
                 bar.innerHTML = `<span style="color:#f1c40f; font-size:18px;">⏳ 等待本局结束后加入...</span>`;
             }
             else if (data.gameState === 'showdown' && me.status === 'playing') {
@@ -469,7 +418,27 @@
                 bar.innerHTML += `<button style="background:#95a5a6;color:white;" onclick="socket.emit('playerAction', {type: 'fold'})">🏳️ 弃牌</button>`;
                 if (callDiff === 0) bar.innerHTML += `<button style="background:#f39c12;color:white;" onclick="socket.emit('playerAction', {type: 'check'})">✊ 过牌 (Check)</button>`;
                 else if (me.chips > callDiff) bar.innerHTML += `<button style="background:#3498db;color:white;" onclick="socket.emit('playerAction', {type: 'call'})">💵 跟注 (补 ${callDiff})</button>`;
-                if (me.chips > callDiff + 50) bar.innerHTML += `<button style="background:#e74c3c;color:white;" onclick="socket.emit('playerAction', {type: 'raise', amount: 50})">🔥 加注 (再加 50)</button>`;
+                
+                // 👉 动态加注列表
+                let maxRaise = me.chips - callDiff;
+                if (maxRaise > 0) {
+                    let raiseAmounts = [50, 100, 200, 500, 1000, 2000];
+                    let availableRaises = raiseAmounts.filter(amt => amt <= maxRaise);
+                    if (availableRaises.length === 0) availableRaises.push(maxRaise);
+
+                    let raiseMenuHTML = `<div id="raise-menu" style="display: none; position: absolute; bottom: 110%; left: 50%; transform: translateX(-50%); background: rgba(22, 33, 62, 0.95); border: 2px solid #e74c3c; border-radius: 10px; padding: 10px; flex-direction: column; gap: 8px; min-width: 100px; box-shadow: 0 5px 20px rgba(0,0,0,0.9); z-index: 200;">`;
+                    availableRaises.forEach(amt => {
+                        raiseMenuHTML += `<button style="background: #c0392b; color: white; border: none; padding: 8px; border-radius: 5px; cursor: pointer; width: 100%; font-size: 14px; box-shadow: none; margin: 0;" onclick="socket.emit('playerAction', {type: 'raise', amount: ${amt}}); document.getElementById('raise-menu').style.display='none';">+ ${amt}</button>`;
+                    });
+                    raiseMenuHTML += `</div>`;
+
+                    bar.innerHTML += `
+                    <div style="position: relative; display: flex; flex: 1; min-width: max-content; margin: 0 2px;">
+                        <button style="background:#e74c3c; color:white; width: 100%; margin: 0; padding: 10px 15px; font-size: 16px; border-radius: 5px; font-weight: bold; border: none; cursor: pointer;" onclick="let m = document.getElementById('raise-menu'); m.style.display = (m.style.display === 'flex' ? 'none' : 'flex');">🔥 加注...</button>
+                        ${raiseMenuHTML}
+                    </div>`;
+                }
+                
                 if (me.chips > 0) bar.innerHTML += `<button style="background:#8e44ad;color:white;box-shadow: 0 0 10px #8e44ad;" onclick="socket.emit('playerAction', {type: 'all-in'})">🌋 All-In (${me.chips})</button>`;
             }
 
@@ -486,29 +455,18 @@
             }
         });
         
-function sendChat(textOverride) {
-            // 如果在冷却中，直接拦截并给提示
+        function sendChat(textOverride) {
             if (isChatCooldown) {
                 const input = document.getElementById('chat-input');
-                input.placeholder = "🤐 说话太快啦，歇会吧！";
-                input.value = '';
-                setTimeout(() => { input.placeholder = "嘲讽一下..."; }, 1500);
-                return;
+                input.placeholder = "🤐 说话太快啦，歇会吧！"; input.value = '';
+                setTimeout(() => { input.placeholder = "嘲讽一下..."; }, 1500); return;
             }
-
             const input = document.getElementById('chat-input');
-            // 如果传了 textOverride 就用快捷语音的字，否则抓取输入框里的字
             const msg = textOverride || input.value.trim(); 
-
             if (msg) {
                 socket.emit('chatMessage', msg);
-                if (!textOverride) input.value = ''; // 如果是手打的，发完清空输入框
-
-                // 🎯 触发冷却状态
-                isChatCooldown = true;
-                setTimeout(() => {
-                    isChatCooldown = false; // 3秒后解除封印
-                }, CHAT_COOLDOWN_TIME);
+                if (!textOverride) input.value = ''; 
+                isChatCooldown = true; setTimeout(() => { isChatCooldown = false; }, CHAT_COOLDOWN_TIME);
             }
         }
 
@@ -517,10 +475,8 @@ function sendChat(textOverride) {
             const seatDiv = document.getElementById(`seat-${visualIdx}`); 
             if (!seatDiv) return; 
 
-            // 👇 新增：检查这条消息是否在我们的语音库里，如果在就播放
             if (audioCache[data.text]) {
-                audioCache[data.text].currentTime = 0; // 重置进度，支持连击
-                // 必须在有用户交互后(登录/点击)浏览器才允许播声音
+                audioCache[data.text].currentTime = 0; 
                 audioCache[data.text].play().catch(e => console.log("等待用户交互后才能播放语音")); 
             }
 
