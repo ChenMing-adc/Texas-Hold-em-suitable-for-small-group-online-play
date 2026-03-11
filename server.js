@@ -93,23 +93,16 @@ function nextStage() {
     else if (gameState === 'turn') { gameState = 'river'; resetRoundBets(); currentDeck.pop(); communityCards.push(currentDeck.pop()); io.emit('chatMessage', { user: '📢 裁判', text: '进入河牌圈 (River)！' }); } 
     else if (gameState === 'river') { gameState = 'showdown'; }
     
-    // 👉 防奔溃修改：增加 null 判断，跳过掉线的空位
     if (gameState !== 'pre-flop' && gameState !== 'showdown' && gameState !== 'waiting') {
-        currentTurnIndex = 0;
-        let loopCount = 0;
-        while(loopCount < playerOrder.length && 
-             (!seats[playerOrder[currentTurnIndex]] || 
-              seats[playerOrder[currentTurnIndex]].status !== 'playing' || 
-              seats[playerOrder[currentTurnIndex]].chips === 0)) {
-            currentTurnIndex = (currentTurnIndex + 1) % playerOrder.length; 
-            loopCount++;
+        currentTurnIndex = 0; let loopCount = 0;
+        while(loopCount < playerOrder.length && (!seats[playerOrder[currentTurnIndex]] || seats[playerOrder[currentTurnIndex]].status !== 'playing' || seats[playerOrder[currentTurnIndex]].chips === 0)) {
+            currentTurnIndex = (currentTurnIndex + 1) % playerOrder.length; loopCount++;
         }
         if (loopCount >= playerOrder.length) { setTimeout(nextStage, 1000); return; }
     }
     broadcastTable();
 }
 
-// 👉 修改点 1：替换 evaluateWinner 函数，加入破产判定
 function evaluateWinner() {
     let activePlayers = playerOrder.filter(idx => seats[idx] && seats[idx].status === 'playing');
     if (activePlayers.length === 1) {
@@ -117,10 +110,7 @@ function evaluateWinner() {
         io.emit('chatMessage', { user: '🏆 战报', text: `其他人都弃牌了，【${winner.username}】赢走 ${pot} 筹码！` });
         io.emit('settlePot', { winners: [activePlayers[0]], splitPot: pot });
         setTimeout(() => {
-            winner.chips += pot; winner.isWinner = true;
-            pot = 0; gameState = 'waiting'; 
-            
-            // 核心新增：结算时，清算破产玩家，打入观战席
+            winner.chips += pot; winner.isWinner = true; pot = 0; gameState = 'waiting'; 
             seats.forEach(p => { if (p && p.chips <= 0) p.status = 'spectator'; });
             broadcastTable();
         }, 2500);
@@ -145,8 +135,6 @@ function evaluateWinner() {
         setTimeout(() => {
             winners.forEach(w => { seats[w.seatIdx].chips += splitPot; seats[w.seatIdx].isWinner = true; });
             pot = 0; gameState = 'waiting'; 
-            
-            // 核心新增：结算时，清算破产玩家，打入观战席
             seats.forEach(p => { if (p && p.chips <= 0) p.status = 'spectator'; });
             broadcastTable();
         }, 2500);
@@ -163,17 +151,14 @@ function broadcastTable() {
                 if (i === dealerIndex) role = '庄'; else if (i === sbIndex) role = '小盲'; else if (i === bbIndex) role = '大盲';
             }
             return {
-                id: p.id, username: p.username, avatar: p.avatar, chips: p.chips,
+                id: p.id, username: p.username, avatar: p.avatar, chips: p.chips, debt: p.debt, // 👉 加入欠款数据
                 status: p.status, isReady: p.isReady, isWinner: p.isWinner, role: role, roundBet: p.roundBet || 0,
                 hasRevealed: p.hasRevealed, 
                 holeCards: showRealCards ? p.holeCards : (p.holeCards.length > 0 ? ['hidden', 'hidden'] : [])
             };
         });
 
-        socket.emit('updateTable', {
-            gameState: gameState, communityCards: communityCards, pot: pot, currentHighestBet: currentHighestBet, seats: safeSeats,
-            currentTurnSeatIdx: gameState !== 'waiting' && gameState !== 'showdown' ? playerOrder[currentTurnIndex] : null
-        });
+        socket.emit('updateTable', { gameState: gameState, communityCards: communityCards, pot: pot, currentHighestBet: currentHighestBet, seats: safeSeats, currentTurnSeatIdx: gameState !== 'waiting' && gameState !== 'showdown' ? playerOrder[currentTurnIndex] : null });
     });
 }
 
@@ -189,7 +174,8 @@ io.on('connection', (socket) => {
         let emptySeatIdx = seats.findIndex(s => s === null);
         if (emptySeatIdx === -1) return socket.emit('loginError', '房间已满！');
         
-        seats[emptySeatIdx] = { id: socket.id, username: username, avatar: avatars[emptySeatIdx%6], chips: 1000, status: 'waiting', isReady: false, isWinner: false, hasRevealed: false, holeCards: [], roundBet: 0, acted: false };
+        // 👉 新玩家加入时，debt 默认为 0
+        seats[emptySeatIdx] = { id: socket.id, username: username, avatar: avatars[emptySeatIdx%6], chips: 1000, debt: 0, status: 'waiting', isReady: false, isWinner: false, hasRevealed: false, holeCards: [], roundBet: 0, acted: false };
         socket.seatIdx = emptySeatIdx; socket.username = username; 
         socket.emit('loginSuccess', emptySeatIdx); broadcastTable();
     });
@@ -202,26 +188,41 @@ io.on('connection', (socket) => {
 
     socket.on('chatMessage', (msg) => { if (socket.seatIdx !== undefined) io.emit('chatBubble', { seatIdx: socket.seatIdx, text: msg }); });
 
-// 👉 修改点 2：替换 ready 事件，禁止观战者准备，并且计算活跃玩家时不带观战者
     socket.on('ready', () => {
         if (gameState !== 'waiting' && gameState !== 'showdown') return;
         let p = seats[socket.seatIdx];
         if (!p) return;
-        
-        // 没钱的人不准点准备
-        if (p.chips <= 0) {
-            p.status = 'spectator';
-            p.isReady = false;
-            return;
-        }
+        if (p.chips <= 0) { p.status = 'spectator'; p.isReady = false; return; }
 
         p.isReady = true;
-        // 只有非观战玩家才算作 activePlayers
         let activePlayers = seats.filter(s => s !== null && s.status !== 'spectator');
-        
-        if (activePlayers.length >= 2 && activePlayers.every(player => player.isReady)) { 
-            gameState = 'waiting'; nextStage(); 
-        } else {
+        if (activePlayers.length >= 2 && activePlayers.every(player => player.isReady)) { gameState = 'waiting'; nextStage(); } else { broadcastTable(); }
+    });
+
+    // 👉 核心新增：向系统借款
+    socket.on('borrow', () => {
+        let p = seats[socket.seatIdx];
+        if (p && p.chips <= 0) {
+            p.chips += 1000;
+            p.debt += 1000;
+            if (p.status === 'spectator') p.status = 'waiting'; // 借到钱了，可以回桌子等开局了
+            io.emit('chatBubble', { seatIdx: socket.seatIdx, text: '🏦 借系统 1000 块！' });
+            broadcastTable();
+        }
+    });
+
+    // 👉 核心新增：偿还系统欠款
+    socket.on('repay', () => {
+        let p = seats[socket.seatIdx];
+        // 只能在游戏等待期间还款，以免扰乱进行中的下注逻辑
+        if (gameState !== 'waiting') return; 
+        if (p && p.debt > 0 && p.chips > 0) {
+            let amount = Math.min(p.chips, p.debt); // 有多少还多少
+            p.chips -= amount;
+            p.debt -= amount;
+            // 如果还完钱刚好破产，转回观战者
+            if (p.chips <= 0) p.status = 'spectator';
+            io.emit('chatBubble', { seatIdx: socket.seatIdx, text: `💸 还了 ${amount} 欠款！` });
             broadcastTable();
         }
     });
@@ -230,18 +231,15 @@ io.on('connection', (socket) => {
         if (gameState !== 'showdown') return;
         let p = seats[socket.seatIdx];
         if (p && p.status === 'playing' && !p.hasRevealed) {
-            p.hasRevealed = true;
-            io.emit('chatBubble', { seatIdx: socket.seatIdx, text: '亮牌！🃏' });
+            p.hasRevealed = true; io.emit('chatBubble', { seatIdx: socket.seatIdx, text: '亮牌！🃏' });
             let activePlayers = playerOrder.filter(idx => seats[idx] && seats[idx].status === 'playing');
             let allRevealed = activePlayers.every(idx => seats[idx].hasRevealed);
-            if (allRevealed) evaluateWinner(); 
-            else broadcastTable();
+            if (allRevealed) evaluateWinner(); else broadcastTable();
         }
     });
 
     socket.on('playerAction', (action) => {
         let p = seats[socket.seatIdx];
-        // 👉 防穿透修改：严格校验当前玩家是否真在局内
         if (!p || p.status !== 'playing') return;
         if (gameState === 'waiting' || gameState === 'showdown' || socket.seatIdx !== playerOrder[currentTurnIndex]) return;
 
@@ -259,38 +257,29 @@ io.on('connection', (socket) => {
         }
 
         let playingPlayers = playerOrder.map(idx => seats[idx]).filter(s => s && s.status === 'playing');
-        if (playingPlayers.length <= 1) { 
-            gameState = 'showdown'; evaluateWinner(); return; 
-        }
+        if (playingPlayers.length <= 1) { gameState = 'showdown'; evaluateWinner(); return; }
         
         let allActed = playingPlayers.every(s => s.acted === true || s.chips === 0);
         if (allActed) { nextStage(); } 
         else { 
-            let loopCount = 0;
-            do { currentTurnIndex = (currentTurnIndex + 1) % playerOrder.length; loopCount++; } 
+            let loopCount = 0; do { currentTurnIndex = (currentTurnIndex + 1) % playerOrder.length; loopCount++; } 
             while (loopCount < playerOrder.length && (!seats[playerOrder[currentTurnIndex]] || seats[playerOrder[currentTurnIndex]].status !== 'playing' || seats[playerOrder[currentTurnIndex]].acted === true || seats[playerOrder[currentTurnIndex]].chips === 0)); 
             if (loopCount >= playerOrder.length) nextStage(); else broadcastTable(); 
         }
     });
 
-    // 👉 掉线保护：掉线时自动将轮次平滑移交给下一位
     socket.on('disconnect', () => { 
         if (socket.seatIdx !== undefined) { 
             let wasMyTurn = (gameState !== 'waiting' && gameState !== 'showdown' && playerOrder[currentTurnIndex] === socket.seatIdx);
             seats[socket.seatIdx] = null; 
-            
             if (gameState !== 'waiting' && gameState !== 'showdown') {
                 let playingPlayers = playerOrder.map(idx => seats[idx]).filter(s => s && s.status === 'playing');
-                if (playingPlayers.length <= 1) {
-                    gameState = 'showdown'; evaluateWinner(); return;
-                }
+                if (playingPlayers.length <= 1) { gameState = 'showdown'; evaluateWinner(); return; }
                 if (wasMyTurn) {
                     let allActed = playingPlayers.every(s => s.acted === true || s.chips === 0);
                     if (allActed) { nextStage(); } 
                     else {
-                        let loopCount = 0;
-                        do { currentTurnIndex = (currentTurnIndex + 1) % playerOrder.length; loopCount++; } 
-                        while (loopCount < playerOrder.length && (!seats[playerOrder[currentTurnIndex]] || seats[playerOrder[currentTurnIndex]].status !== 'playing' || seats[playerOrder[currentTurnIndex]].acted === true || seats[playerOrder[currentTurnIndex]].chips === 0)); 
+                        let loopCount = 0; do { currentTurnIndex = (currentTurnIndex + 1) % playerOrder.length; loopCount++; } while (loopCount < playerOrder.length && (!seats[playerOrder[currentTurnIndex]] || seats[playerOrder[currentTurnIndex]].status !== 'playing' || seats[playerOrder[currentTurnIndex]].acted === true || seats[playerOrder[currentTurnIndex]].chips === 0)); 
                         if (loopCount >= playerOrder.length) nextStage(); else broadcastTable(); 
                     }
                     return; 

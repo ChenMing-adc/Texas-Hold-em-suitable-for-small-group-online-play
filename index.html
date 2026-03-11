@@ -20,6 +20,13 @@
         .pot { font-size: clamp(16px, 2.5vw, 24px); color: #f1c40f; font-weight: bold; }
         .stage { color: #ecf0f1; font-size: clamp(12px, 1.8vw, 16px); opacity: 0.9;}
 
+        /* 👉 排行榜 CSS */
+        #leaderboard-container { position: fixed; top: 90px; left: 20px; z-index: 100; background: rgba(22, 33, 62, 0.85); padding: 10px; border-radius: 12px; border: 2px solid #3498db; box-shadow: 0 5px 20px rgba(0,0,0,0.6); color: white; width: 180px; pointer-events: none; }
+        .lb-title { font-weight: bold; margin-bottom: 5px; text-align: center; color: #3498db; font-size: 14px; }
+        .lb-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 12px; }
+        .lb-table th { color: #f1c40f; border-bottom: 1px solid #444; padding-bottom: 3px; }
+        .lb-table td { padding-top: 4px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+
         .poker-table { position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); width: 85vw; max-width: 900px; height: 45vw; max-height: 450px; background: #27ae60; border-radius: 50%; border: clamp(5px, 1.5vw, 15px) solid #2c3e50; box-shadow: 0 0 clamp(10px, 4vw, 50px) rgba(0,0,0,0.5) inset; }
         
         #deck-container { position: absolute; top: 25%; left: 65%; transform: translate(-50%, -50%); z-index: 4; }
@@ -51,7 +58,7 @@
         .avatar { font-size: clamp(25px, 4vw, 40px); margin: 0; }
         .chips { font-size: clamp(12px, 1.5vw, 14px); color: #f1c40f; margin-top: 5px; font-weight: bold;}
         
-        .player-details { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.4); opacity: 0; pointer-events: none; background: rgba(22, 33, 62, 0.95); border: 2px solid #3498db; border-radius: 12px; padding: 15px; z-index: 200; min-width: 120px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
+        .player-details { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.4); opacity: 0; pointer-events: none; background: rgba(22, 33, 62, 0.95); border: 2px solid #3498db; border-radius: 12px; padding: 15px; z-index: 200; min-width: 140px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
         .player-panel.expanded .player-details { transform: translate(-50%, -50%) scale(1); opacity: 1; pointer-events: auto; }
         .details-avatar { font-size: 45px; margin-bottom: 5px; }
         .details-name { font-size: 16px; font-weight: bold; color: white; margin-bottom: 8px; border-bottom: 1px solid #444; padding-bottom: 5px; }
@@ -63,7 +70,6 @@
         .crown { position: absolute; top: -30px; left: 50%; transform: translateX(-50%); font-size: clamp(20px, 3.5vw, 35px); text-shadow: 0 0 15px gold; animation: floatCrown 1.5s ease-in-out infinite; z-index: 20; }
         @keyframes floatCrown { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, -10px); } }
 
-        /* 手牌：取消整组渐变，保留单张控制 */
         .hole-cards { display: flex; justify-content: center; gap: 2px; margin-top: -15px; z-index: 10; position: relative; }
         .hole-cards .card { width: clamp(30px, 4.5vw, 45px); height: clamp(43px, 6.5vw, 65px); font-size: clamp(12px, 1.5vw, 16px); margin: 0; } 
         
@@ -90,6 +96,10 @@
             .poker-table { width: 90vw; height: 130vw; max-height: 60vh; border-radius: 150px; }
             #pot-container { top: 10px; left: 10px; padding: 5px 10px; }
             .pot { font-size: 14px; } .stage { font-size: 12px; }
+            #leaderboard-container { top: 75px; left: 10px; padding: 5px; font-size: 10px; width: 140px; }
+            .lb-title { font-size: 12px; margin-bottom: 2px;}
+            .lb-table { font-size: 10px; }
+            
             #deck-container { top: 15%; left: 50%; } 
             .seat-1 { top: 75%; left: 0%; } .seat-2 { top: 25%; left: 0%; } .seat-4 { top: 25%; left: 100%; } .seat-5 { top: 75%; left: 100%; } 
             #control-bar { width: 95vw; flex-wrap: wrap; justify-content: center; bottom: 10px; padding: 8px;}
@@ -152,15 +162,12 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
- const socket = io();
+        const socket = io();
         let mySeatIndex = -1; let expandedSeats = new Set(); let isMyCardsPeeked = false;
         let audioCtx; 
         
-        let lastGameState = 'waiting';
-        let isDealingAnimationPlaying = false; 
-        let previousChips = {}; 
-        let previousCommunityCount = 0; 
-        let dealtCards = new Set(); 
+        let lastGameState = 'waiting'; let isDealingAnimationPlaying = false; 
+        let previousChips = {}; let previousCommunityCount = 0; let dealtCards = new Set(); 
 
         function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); }
         function playChipSound() { if (!audioCtx || audioCtx.state === 'suspended') return; const osc = audioCtx.createOscillator(); const gainNode = audioCtx.createGain(); osc.type = 'sine'; osc.frequency.setValueAtTime(4000 + Math.random() * 2000, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(8000, audioCtx.currentTime + 0.03); gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime); gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05); osc.connect(gainNode); gainNode.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.05); }
@@ -212,19 +219,13 @@
         function toggleSeat(visualIdx) { const panel = document.getElementById(`seat-${visualIdx}`).querySelector('.player-panel'); if (expandedSeats.has(visualIdx)) { expandedSeats.delete(visualIdx); if (panel) panel.classList.remove('expanded'); } else { expandedSeats.add(visualIdx); if (panel) panel.classList.add('expanded'); } }
         function toggleMyCards() { isMyCardsPeeked = !isMyCardsPeeked; document.querySelectorAll('.my-card-container').forEach(el => { if (isMyCardsPeeked) el.classList.add('peeked'); else el.classList.remove('peeked'); }); }
         
-        // 👉 新增 forcePeek 参数：无论如何都强制翻开牌面 (用于结算阶段给观众看)
         function createFlippableCardHTML(cardData, isMine = false, forceFaceDown = false, extraClass = '', extraStyle = '', isNewlyRevealed = false, forcePeek = false) {
             let innerContent = '';
             if (forceFaceDown || !cardData || cardData === 'hidden') { innerContent = `<div class="flip-front"></div><div class="flip-back hidden-bg"></div>`; } 
             else { const isRed = cardData.suit === '♥️' || cardData.suit === '♦️'; innerContent = `<div class="flip-front"></div><div class="flip-back ${isRed ? 'red' : ''}">${cardData.suit}${cardData.rank}</div>`; }
-            
             let peekClass = '';
-            if (forcePeek && !forceFaceDown && cardData !== 'hidden') {
-                peekClass = 'peeked'; // 强制结算展示
-            } else if (!forceFaceDown && cardData && cardData !== 'hidden' && !isMine) { 
-                if (!isNewlyRevealed) peekClass = 'peeked'; 
-            }
-            
+            if (forcePeek && !forceFaceDown && cardData !== 'hidden') { peekClass = 'peeked'; } 
+            else if (!forceFaceDown && cardData && cardData !== 'hidden' && !isMine) { if (!isNewlyRevealed) peekClass = 'peeked'; }
             const myClass = isMine ? 'my-card-container ' + ((isMyCardsPeeked || forcePeek) ? 'peeked' : '') : '';
             const clickEvent = (isMine && !forcePeek) ? 'onclick="toggleMyCards()"' : '';
             return `<div class="card flip-container ${myClass} ${peekClass} ${extraClass}" style="${extraStyle}" ${clickEvent}><div class="flip-inner">${innerContent}</div></div>`;
@@ -239,26 +240,13 @@
 
         socket.on('updateTable', (data) => {
             let triggerDealAnim = false;
-            // 当真正从等待切换到翻牌前，说明新局正式开始，此时才清空桌上筹码并准备发牌
-            if (lastGameState === 'waiting' && data.gameState === 'pre-flop') {
-                triggerDealAnim = true;
-                isDealingAnimationPlaying = true;
-                dealtCards.clear(); 
-                document.getElementById('chips-container').innerHTML = ''; // 清空残留筹码
-            }
+            if (lastGameState === 'waiting' && data.gameState === 'pre-flop') { triggerDealAnim = true; isDealingAnimationPlaying = true; dealtCards.clear(); document.getElementById('chips-container').innerHTML = ''; }
             lastGameState = data.gameState;
 
-            if (data.gameState === 'waiting' && data.communityCards.length === 0) {
-                // 只有刚入座或者是被强制重置桌子时，才完全重置
-                isMyCardsPeeked = false; 
-                previousCommunityCount = 0;
-            }
+            if (data.gameState === 'waiting' && data.communityCards.length === 0) { isMyCardsPeeked = false; previousCommunityCount = 0; }
 
-            let newCommCount = data.communityCards.length;
-            let newlyRevealedIndices = [];
-            if (newCommCount > previousCommunityCount && data.gameState !== 'waiting') {
-                for(let i = previousCommunityCount; i < newCommCount; i++) newlyRevealedIndices.push(i);
-            }
+            let newCommCount = data.communityCards.length; let newlyRevealedIndices = [];
+            if (newCommCount > previousCommunityCount && data.gameState !== 'waiting') { for(let i = previousCommunityCount; i < newCommCount; i++) newlyRevealedIndices.push(i); }
             previousCommunityCount = newCommCount;
 
             for(let i = 0; i < 6; i++) {
@@ -276,27 +264,23 @@
             const stageNames = { 'waiting': '等待开始...', 'pre-flop': '翻牌前', 'flop': '翻牌圈', 'turn': '转牌圈', 'river': '河牌圈', 'showdown': '🚨 玩家亮牌对峙！ 🚨' };
             document.getElementById('stage-display').innerText = stageNames[data.gameState];
             
-            // 👉 核心修改：判定是否处于“展示期 (Showdown或结算后的等待期间)”
+            // 👉 排行榜渲染
+            let lbHTML = `<div class="lb-title">🏆 财富榜</div><table class="lb-table"><tr><th>玩家</th><th>资产</th><th>欠款</th></tr>`;
+            let activePlayers = data.seats.filter(s => s !== null).sort((a,b) => (b.chips - b.debt) - (a.chips - a.debt));
+            activePlayers.forEach(p => { lbHTML += `<tr><td>${p.username}</td><td>${p.chips}</td><td style="color:#e74c3c;">${p.debt > 0 ? p.debt : '0'}</td></tr>`; });
+            lbHTML += `</table>`;
+            let lbContainer = document.getElementById('leaderboard-container');
+            if(!lbContainer) { lbContainer = document.createElement('div'); lbContainer.id = 'leaderboard-container'; document.getElementById('game-screen').appendChild(lbContainer); }
+            lbContainer.innerHTML = lbHTML;
+
             let isDisplayPhase = (data.gameState === 'showdown' || (data.gameState === 'waiting' && data.communityCards.length > 0));
 
-            // 👉 公共牌留存逻辑
             let boardHTML = '';
             for (let i = 0; i < 5; i++) {
                 let cData = data.communityCards[i]; 
-                if (data.gameState === 'waiting' && data.communityCards.length === 0) {
-                    // 全新的一局，空槽
-                    boardHTML += `<div class="card-slot"></div>`;
-                } else if (data.gameState === 'waiting' && cData) {
-                    // 结算期留存：不加发牌动画，强制渲染明牌
-                    boardHTML += createFlippableCardHTML(cData, false, false, `comm-card-anim-${i}`, 'opacity:1;', false, true); 
-                } else {
-                    // 游戏进行中
-                    let isNew = newlyRevealedIndices.includes(i);
-                    let targetClass = `comm-card-anim-${i}`;
-                    let extraClass = targetClass + ' ' + (isNew ? 'needs-flip' : '');
-                    let extraStyle = (isDealingAnimationPlaying && !dealtCards.has(targetClass)) ? 'opacity:0;' : 'opacity:1;'; 
-                    boardHTML += createFlippableCardHTML(cData, false, !cData, extraClass, extraStyle, isNew); 
-                }
+                if (data.gameState === 'waiting' && data.communityCards.length === 0) { boardHTML += `<div class="card-slot"></div>`; } 
+                else if (data.gameState === 'waiting' && cData) { boardHTML += createFlippableCardHTML(cData, false, false, `comm-card-anim-${i}`, 'opacity:1;', false, true); } 
+                else { let isNew = newlyRevealedIndices.includes(i); let targetClass = `comm-card-anim-${i}`; let extraClass = targetClass + ' ' + (isNew ? 'needs-flip' : ''); let extraStyle = (isDealingAnimationPlaying && !dealtCards.has(targetClass)) ? 'opacity:0;' : 'opacity:1;'; boardHTML += createFlippableCardHTML(cData, false, !cData, extraClass, extraStyle, isNew); }
             }
             document.getElementById('community-cards-container').innerHTML = boardHTML;
             
@@ -307,32 +291,24 @@
                 let holeCardsHTML = '';
                 if (player.holeCards && player.holeCards.length > 0) {
                     let isMine = (i === mySeatIndex);
-                    holeCardsHTML = `<div class="hole-cards">` + 
-                        player.holeCards.map((c, idx) => {
-                            let targetClass = `hole-card-anim-${visualIdx}-${idx}`;
-                            let extraStyle = (isDealingAnimationPlaying && !dealtCards.has(targetClass)) ? 'opacity:0;' : 'opacity:1;';
-                            // 结算期强制翻开所有人的明牌
-                            return createFlippableCardHTML(c, isMine, false, targetClass, extraStyle, false, isDisplayPhase);
-                        }).join('') + `</div>`;
+                    holeCardsHTML = `<div class="hole-cards">` + player.holeCards.map((c, idx) => { let targetClass = `hole-card-anim-${visualIdx}-${idx}`; let extraStyle = (isDealingAnimationPlaying && !dealtCards.has(targetClass)) ? 'opacity:0;' : 'opacity:1;'; return createFlippableCardHTML(c, isMine, false, targetClass, extraStyle, false, isDisplayPhase); }).join('') + `</div>`;
                 }
 
-                const isTurn = (data.currentTurnSeatIdx === i) ? 'active-turn' : '';
-                const isExpanded = expandedSeats.has(visualIdx) ? 'expanded' : '';
+                const isTurn = (data.currentTurnSeatIdx === i) ? 'active-turn' : ''; const isExpanded = expandedSeats.has(visualIdx) ? 'expanded' : '';
                 const crownHTML = player.isWinner ? `<div class="crown">👑</div>` : '';
                 let roleHTML = ''; if (player.role === '庄') roleHTML = `<div class="role-badge dealer">D</div>`; else if (player.role === '小盲') roleHTML = `<div class="role-badge sb">SB</div>`; else if (player.role === '大盲') roleHTML = `<div class="role-badge bb">BB</div>`;
                 
-                // 👉 状态文字和名字变灰逻辑 (支持观战)
-                let statusText = '';
-                if (player.status === 'folded') statusText = '(弃牌)';
-                else if (player.status === 'spectator') statusText = '(观战)';
+                let statusText = ''; if (player.status === 'folded') statusText = '(弃牌)'; else if (player.status === 'spectator') statusText = '(观战)';
                 const statusColor = player.isReady ? '#2ecc71' : (player.status === 'folded' ? '#e74c3c' : (player.status === 'spectator' ? '#7f8c8d' : '#bdc3c7'));
-                const avatarOpacity = player.status === 'spectator' ? '0.5' : '1'; // 观战者头像变暗
+                const avatarOpacity = player.status === 'spectator' ? '0.5' : '1'; 
 
+                // 👉 更新弹出名片：加入借贷信息
                 seatDiv.innerHTML = `
                     <div class="player-panel ${isTurn} ${isExpanded}" onclick="toggleSeat(${visualIdx})">
                         ${crownHTML} ${roleHTML}
                         <div class="player-basic" style="opacity: ${avatarOpacity}"><div class="avatar">${player.avatar}</div><div class="chips" style="color:${statusColor}">💰 ${player.chips}</div></div>
-                        <div class="player-details"><div class="details-avatar">${player.avatar}</div><div class="details-name" style="color:${statusColor}">${player.username} ${statusText}</div><div class="details-info">资产: <span>💰 ${player.chips}</span><br>本轮: <span>💵 ${player.roundBet}</span></div></div>
+                        <div class="player-details"><div class="details-avatar">${player.avatar}</div><div class="details-name" style="color:${statusColor}">${player.username} ${statusText}</div>
+                        <div class="details-info">资产: <span>💰 ${player.chips}</span><br>欠款: <span style="color:#e74c3c;">🏦 ${player.debt > 0 ? player.debt : 0}</span><br>本轮: <span>💵 ${player.roundBet}</span></div></div>
                     </div>
                     ${holeCardsHTML}
                 `;
@@ -341,15 +317,23 @@
             const bar = document.getElementById('control-bar'); bar.innerHTML = ''; 
             const me = data.seats[mySeatIndex]; if (!me) return;
             
-            // 👉 底部状态栏判定：观战状态拦截
+            // 👉 操作栏判断：借款与还款
             if (me.status === 'spectator') {
-                bar.innerHTML = `<span style="color:#95a5a6; font-size:18px; font-weight:bold;">👀 筹码已耗尽，处于观战模式</span>`;
+                bar.innerHTML = `<span style="color:#95a5a6; font-size:18px; font-weight:bold;">👀 观战中</span>
+                                 <button style="background:#e74c3c;color:white; margin-left:15px; box-shadow: 0 0 10px #e74c3c;" onclick="initAudio(); socket.emit('borrow')">🏦 借款 1000</button>`;
             }
             else if ((data.gameState === 'waiting') && !me.isReady) { 
                 bar.innerHTML = `<button style="background:#2ecc71;color:white;" onclick="initAudio(); socket.emit('ready')">✅ 准备开始</button>`; 
+                if (me.debt > 0 && me.chips > 0) {
+                    bar.innerHTML += `<button style="background:#e67e22;color:white; margin-left:15px;" onclick="socket.emit('repay')">💸 还款 (欠 ${me.debt})</button>`;
+                }
             } 
             else if ((data.gameState === 'waiting') && me.isReady) { 
                 bar.innerHTML = `<span style="color:#2ecc71; font-size:18px;">✅ 等待其他人...</span>`; 
+            }
+            else if (data.gameState !== 'waiting' && me.status === 'waiting') {
+                // 如果是游戏中途刚借完钱，让他耐心等这局结束
+                bar.innerHTML = `<span style="color:#f1c40f; font-size:18px;">⏳ 等待本局结束后加入...</span>`;
             }
             else if (data.gameState === 'showdown' && me.status === 'playing') {
                 if (!me.hasRevealed) bar.innerHTML = `<button style="background:#e67e22;color:white;box-shadow: 0 0 15px #e67e22; font-size: 20px;" onclick="socket.emit('revealCards')">🃏 亮出你的底牌！</button>`;
@@ -379,7 +363,6 @@
         
         function sendChat() { const input = document.getElementById('chat-input'); if (input.value) { socket.emit('chatMessage', input.value); input.value = ''; } }
         socket.on('chatBubble', (data) => { const visualIdx = getVisualSeatId(data.seatIdx); const seatDiv = document.getElementById(`seat-${visualIdx}`); if (!seatDiv) return; const bubble = document.createElement('div'); bubble.className = 'chat-bubble'; bubble.innerText = data.text; seatDiv.appendChild(bubble); setTimeout(() => { bubble.remove(); }, 3000); });
-    </script>
     </script>
 </body>
 </html>
