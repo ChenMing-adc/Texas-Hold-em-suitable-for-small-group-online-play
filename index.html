@@ -110,6 +110,19 @@
             #top-bar { top: 10px; right: 10px; }
             #top-bar button { padding: 6px 10px; font-size: 12px; }
         }
+
+        /* 快捷按钮样式 */
+        #btn-quick-chat { background: #e67e22; color: white; }
+        
+        /* 快捷消息面板样式 */
+        #quick-chat-menu { display: none; position: absolute; bottom: 100%; left: 0; background: rgba(22, 33, 62, 0.95); border: 2px solid #3498db; border-radius: 10px; padding: 10px; flex-direction: column; gap: 8px; min-width: 220px; margin-bottom: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.8); max-height: 250px; overflow-y: auto; z-index: 101; }
+        .quick-chat-item { background: #2c3e50; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; text-align: left; transition: background 0.2s; font-size: 14px; }
+        .quick-chat-item:hover { background: #3498db; }
+        
+        /* 移动端适配快捷菜单 */
+        @media (max-width: 768px) {
+            #quick-chat-menu { left: 50%; transform: translateX(-50%); min-width: 200px; }
+        }
     </style>
 </head>
 <body>
@@ -155,7 +168,11 @@
         </div>
         
         <div id="chat-input-area">
-            <input type="text" id="chat-input" placeholder="嘲讽一下..."><button onclick="sendChat()">发送</button>
+            <button id="btn-quick-chat" onclick="toggleQuickChat()">💬 快捷</button>
+            <input type="text" id="chat-input" placeholder="嘲讽一下...">
+            <button onclick="sendChat()">发送</button>
+            
+            <div id="quick-chat-menu"></div>
         </div>
         <div id="control-bar"></div>
     </div>
@@ -163,6 +180,83 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
+
+        // 监听回车键发送
+        window.addEventListener('DOMContentLoaded', () => {
+            initQuickChat(); // 这是你上一步加的初始化语音菜单
+            
+            // 👇 新增：给输入框绑定回车事件
+            const chatInput = document.getElementById('chat-input');
+            if (chatInput) {
+                chatInput.addEventListener('keypress', function (e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault(); // 防止某些浏览器回车自带的奇怪行为
+                        sendChat(); // 触发增强版的发送函数
+                    }
+                });
+            }
+        });
+
+        // 👇 聊天冷却相关设置
+        let isChatCooldown = false;
+        const CHAT_COOLDOWN_TIME = 3000; // 冷却时间：3000毫秒（即3秒），你可以随时调
+        // ==========================================
+        // 👇 在这里配置你的快捷消息和对应语音包！ 👇
+        // ==========================================
+        const quickChatConfig = [
+            { text: "快点吧，我等到花儿都谢了！", audioUrl: "./audio/hurry.mp3" },
+            { text: "交个朋友吧，加个微信？", audioUrl: "./audio/friend.mp3" },
+            { text: "不要走，决战到天亮！", audioUrl: "./audio/stay.mp3" },
+            { text: "这把牌我看好你哦~", audioUrl: "./audio/cheer.mp3" },
+            { text: "赢了会所嫩模，输了下海干活！", audioUrl: "./audio/allin.mp3" }
+            // 💡 教学：按照上面的格式，复制一行，改掉 text(文字) 和 audioUrl(音频路径) 即可。
+            // 💡 提示：你需要自己在项目文件夹下建一个 audio 文件夹，把 mp3 丢进去。
+        ];
+        // ==========================================
+
+        // 初始化预加载音频
+        const audioCache = {};
+        function initQuickChat() {
+            const menu = document.getElementById('quick-chat-menu');
+            quickChatConfig.forEach(item => {
+                // 加载音频对象
+                if (item.audioUrl) {
+                    let audio = new Audio(item.audioUrl);
+                    audioCache[item.text] = audio;
+                }
+                // 生成菜单按钮
+                let btn = document.createElement('button');
+                btn.className = 'quick-chat-item';
+                btn.innerText = item.text;
+                // 修改快捷菜单的点击事件
+                btn.onclick = () => {
+                    if (!isChatCooldown) {
+                        sendChat(item.text); // 调用新版发送函数，直接传文本
+                        toggleQuickChat();   // 发完自动收起菜单
+                    } else {
+                        // 如果冷却中，给按钮一个变红的视觉反馈
+                        const oldBg = btn.style.background;
+                        btn.style.background = '#e74c3c';
+                        btn.innerText = '⏳ 冷却中...';
+                        setTimeout(() => {
+                            btn.style.background = ''; // 恢复原样
+                            btn.innerText = item.text;
+                        }, 1000);
+                    }
+                };
+                menu.appendChild(btn);
+            });
+        }
+
+        // 切换菜单显示/隐藏
+        function toggleQuickChat() {
+            const menu = document.getElementById('quick-chat-menu');
+            menu.style.display = (menu.style.display === 'flex') ? 'none' : 'flex';
+        }
+        
+        // 页面启动时执行初始化
+        window.addEventListener('DOMContentLoaded', initQuickChat);
+
         let mySeatIndex = -1; let expandedSeats = new Set(); let isMyCardsPeeked = false;
         let audioCtx; 
         
@@ -361,8 +455,50 @@
             }
         });
         
-        function sendChat() { const input = document.getElementById('chat-input'); if (input.value) { socket.emit('chatMessage', input.value); input.value = ''; } }
-        socket.on('chatBubble', (data) => { const visualIdx = getVisualSeatId(data.seatIdx); const seatDiv = document.getElementById(`seat-${visualIdx}`); if (!seatDiv) return; const bubble = document.createElement('div'); bubble.className = 'chat-bubble'; bubble.innerText = data.text; seatDiv.appendChild(bubble); setTimeout(() => { bubble.remove(); }, 3000); });
+function sendChat(textOverride) {
+            // 如果在冷却中，直接拦截并给提示
+            if (isChatCooldown) {
+                const input = document.getElementById('chat-input');
+                input.placeholder = "🤐 说话太快啦，歇会吧！";
+                input.value = '';
+                setTimeout(() => { input.placeholder = "嘲讽一下..."; }, 1500);
+                return;
+            }
+
+            const input = document.getElementById('chat-input');
+            // 如果传了 textOverride 就用快捷语音的字，否则抓取输入框里的字
+            const msg = textOverride || input.value.trim(); 
+
+            if (msg) {
+                socket.emit('chatMessage', msg);
+                if (!textOverride) input.value = ''; // 如果是手打的，发完清空输入框
+
+                // 🎯 触发冷却状态
+                isChatCooldown = true;
+                setTimeout(() => {
+                    isChatCooldown = false; // 3秒后解除封印
+                }, CHAT_COOLDOWN_TIME);
+            }
+        }
+
+        socket.on('chatBubble', (data) => { 
+            const visualIdx = getVisualSeatId(data.seatIdx); 
+            const seatDiv = document.getElementById(`seat-${visualIdx}`); 
+            if (!seatDiv) return; 
+
+            // 👇 新增：检查这条消息是否在我们的语音库里，如果在就播放
+            if (audioCache[data.text]) {
+                audioCache[data.text].currentTime = 0; // 重置进度，支持连击
+                // 必须在有用户交互后(登录/点击)浏览器才允许播声音
+                audioCache[data.text].play().catch(e => console.log("等待用户交互后才能播放语音")); 
+            }
+
+            const bubble = document.createElement('div'); 
+            bubble.className = 'chat-bubble'; 
+            bubble.innerText = data.text; 
+            seatDiv.appendChild(bubble); 
+            setTimeout(() => { bubble.remove(); }, 3000); 
+        });
     </script>
 </body>
 </html>
