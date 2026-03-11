@@ -29,17 +29,56 @@
         #btn-close-modal { background: #95a5a6; margin-left: 10px; }
         #game-screen { display: none; width: 100%; height: 100%; position: relative; }
         
-        #pot-container { position: fixed; top: 20px; left: 20px; z-index: 100; background: rgba(22, 33, 62, 0.85); padding: 10px 20px; border-radius: 15px; border: 2px solid #f1c40f; box-shadow: 0 5px 20px rgba(0,0,0,0.6); display: flex; flex-direction: column; gap: 5px; }
-        .pot { font-size: clamp(16px, 2.5vw, 24px); color: #f1c40f; font-weight: bold; }
-        .stage { color: #ecf0f1; font-size: clamp(12px, 1.8vw, 16px); opacity: 0.9;}
+        /* 👉 核心修改 1：奖池改为居中隐藏的弹窗样式 */
+        #pot-container { 
+            position: fixed; 
+            top: 40%; 
+            left: 50%; 
+            transform: translate(-50%, -50%) scale(0.5); 
+            opacity: 0; 
+            pointer-events: none; 
+            z-index: 300; 
+            background: rgba(22, 33, 62, 0.95); 
+            padding: 20px 40px; 
+            border-radius: 20px; 
+            border: 3px solid #f1c40f; 
+            box-shadow: 0 10px 40px rgba(0,0,0,0.9); 
+            display: flex; 
+            flex-direction: column; 
+            gap: 10px; 
+            text-align: center;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+        }
+        /* 当被激活时放大显示 */
+        #pot-container.show {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1.2);
+            pointer-events: auto;
+        }
+        .pot { font-size: clamp(20px, 3.5vw, 30px); color: #f1c40f; font-weight: bold; text-shadow: 0 0 10px rgba(241, 196, 15, 0.5); }
+        .stage { color: #ecf0f1; font-size: clamp(14px, 2vw, 18px); font-weight: bold; opacity: 0.9;}
 
-        #leaderboard-container { position: fixed; top: 90px; left: 20px; z-index: 100; background: rgba(22, 33, 62, 0.85); padding: 10px; border-radius: 12px; border: 2px solid #3498db; box-shadow: 0 5px 20px rgba(0,0,0,0.6); color: white; width: 180px; pointer-events: none; }
+        /* 桌子中央的浅色提示文字 */
+        .table-hint {
+            position: absolute;
+            top: 35%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: rgba(255,255,255,0.4);
+            font-size: clamp(12px, 2vw, 16px);
+            font-weight: bold;
+            pointer-events: none;
+            z-index: 1;
+            text-shadow: 0 0 5px rgba(0,0,0,0.5);
+        }
+
+        #leaderboard-container { position: fixed; top: 90px; left: 20px; z-index: 100; background: rgba(22, 33, 62, 0.85); padding: 10px; border-radius: 12px; border: 2px solid #3498db; box-shadow: 0 5px 20px rgba(0,0,0,0.6); color: white; width: max-content; min-width: 120px; transition: all 0.3s; }
         .lb-title { font-weight: bold; margin-bottom: 5px; text-align: center; color: #3498db; font-size: 14px; }
         .lb-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 12px; }
         .lb-table th { color: #f1c40f; border-bottom: 1px solid #444; padding-bottom: 3px; }
         .lb-table td { padding-top: 4px; border-bottom: 1px solid rgba(255,255,255,0.05); }
 
-        .poker-table { position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); width: 85vw; max-width: 900px; height: 45vw; max-height: 450px; background: #27ae60; border-radius: 50%; border: clamp(5px, 1.5vw, 15px) solid #2c3e50; box-shadow: 0 0 clamp(10px, 4vw, 50px) rgba(0,0,0,0.5) inset; }
+        .poker-table { position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); width: 85vw; max-width: 900px; height: 45vw; max-height: 450px; background: #27ae60; border-radius: 50%; border: clamp(5px, 1.5vw, 15px) solid #2c3e50; box-shadow: 0 0 clamp(10px, 4vw, 50px) rgba(0,0,0,0.5) inset; cursor: pointer; /* 增加鼠标手势暗示可点击 */ }
         
         #deck-container { position: absolute; top: 25%; left: 65%; transform: translate(-50%, -50%); z-index: 4; }
         .deck-card { position: absolute; box-shadow: 2px 2px 5px rgba(0,0,0,0.8); }
@@ -60,9 +99,15 @@
         .float-money { position: absolute; color: #2ecc71; font-weight: bold; font-size: clamp(24px, 4vw, 32px); top: -20px; left: 50%; transform: translate(-50%, 0); text-shadow: 0 0 10px rgba(0,0,0,0.8); z-index: 100; animation: floatMoneyAnim 1.5s ease-out forwards; pointer-events: none; }
         @keyframes floatMoneyAnim { 0% { opacity: 1; transform: translate(-50%, 0) scale(1); } 100% { opacity: 0; transform: translate(-50%, -80px) scale(1.2); } }
 
-        .seat { position: absolute; width: clamp(80px, 12vw, 130px); text-align: center; transform: translate(-50%, -50%); z-index: 10;}
-        .seat-0 { top: 100%; left: 50%; } .seat-1 { top: 85%; left: 0%; } .seat-2 { top: 15%; left: 0%; } 
-        .seat-3 { top: 0%; left: 50%; } .seat-4 { top: 15%; left: 100%; } .seat-5 { top: 85%; left: 100%; } 
+        .seat { position: absolute; width: clamp(80px, 12vw, 130px); text-align: center; transform: translate(-50%, -50%); z-index: 10; cursor: default;}
+        .seat-0 { top: 100%; left: 50%; } 
+        .seat-1 { top: 85%; left: 10%; } 
+        .seat-2 { top: 50%; left: 0%; } 
+        .seat-3 { top: 15%; left: 10%; } 
+        .seat-4 { top: 0%; left: 50%; } 
+        .seat-5 { top: 15%; left: 90%; } 
+        .seat-6 { top: 50%; left: 100%; } 
+        .seat-7 { top: 85%; left: 90%; } 
 
         .player-panel { position: relative; background: #34495e; padding: clamp(5px, 1vw, 10px); border-radius: 10px; border: 3px solid transparent; transition: all 0.3s; z-index: 15; cursor: pointer;}
         .player-panel.active-turn { border-color: #f1c40f; box-shadow: 0 0 15px #f1c40f; transform: scale(1.05); }
@@ -106,13 +151,19 @@
 
         @media (max-width: 768px) {
             .poker-table { width: 80vw; height: 120vw; max-height: 55vh; border-radius: 120px; }
-            #pot-container { top: 10px; left: 10px; padding: 5px 10px; }
-            .pot { font-size: 14px; } .stage { font-size: 12px; }
+            #leaderboard-container { top: 60px; left: 10px; padding: 5px 10px; }
             #deck-container { top: 15%; left: 50%; } 
-            .seat-1 { top: 75%; left: 5%; } 
-            .seat-2 { top: 25%; left: 5%; } 
-            .seat-4 { top: 25%; left: 95%; } 
-            .seat-5 { top: 75%; left: 95%; } 
+            
+            /* 手机端奖池弹出时稍微缩小一点，避免占满屏幕 */
+            #pot-container.show { transform: translate(-50%, -50%) scale(1); }
+
+            .seat-1 { top: 85%; left: 0%; } 
+            .seat-2 { top: 50%; left: -5%; } 
+            .seat-3 { top: 15%; left: 0%; } 
+            .seat-5 { top: 15%; left: 100%; } 
+            .seat-6 { top: 50%; left: 105%; } 
+            .seat-7 { top: 85%; left: 100%; } 
+
             #control-bar { width: 100vw; flex-wrap: nowrap; justify-content: center; bottom: 5px; padding: 5px; box-sizing: border-box; }
             #control-bar button { padding: 8px 5px; font-size: 14px; flex: 1 1 auto; margin: 2px; } 
             #chat-input-area { bottom: 85px; top: auto; left: 5vw; width: 90vw; justify-content: space-between; transform: none; box-sizing: border-box;} 
@@ -157,6 +208,8 @@
         </div>
 
         <div class="poker-table">
+            <div class="table-hint">👆 点击桌面查看奖池</div>
+
             <div id="deck-container">
                 <div class="card hidden-bg deck-card"></div><div class="card hidden-bg deck-card"></div><div class="card hidden-bg deck-card"></div>
             </div>
@@ -169,6 +222,7 @@
             <div id="seat-0" class="seat seat-0"></div><div id="seat-1" class="seat seat-1"></div>
             <div id="seat-2" class="seat seat-2"></div><div id="seat-3" class="seat seat-3"></div>
             <div id="seat-4" class="seat seat-4"></div><div id="seat-5" class="seat seat-5"></div>
+            <div id="seat-6" class="seat seat-6"></div><div id="seat-7" class="seat seat-7"></div>
         </div>
         
         <div id="chat-input-area">
@@ -192,6 +246,21 @@
                     if (e.key === 'Enter') { e.preventDefault(); sendChat(); }
                 });
             }
+
+            // 👉 核心修改 2：监听全局点击事件，控制奖池的显示与隐藏
+            document.addEventListener('click', function(e) {
+                const potEl = document.getElementById('pot-container');
+                if (!potEl) return;
+                
+                // 判断点击的是否在牌桌内，并且不是点击在了玩家的座位上
+                if (e.target.closest('.poker-table') && !e.target.closest('.seat')) {
+                    potEl.classList.add('show');
+                } 
+                // 如果点击了除了奖池本身之外的任何其他区域（比如黑色背景、按钮），就隐藏
+                else if (!e.target.closest('#pot-container')) {
+                    potEl.classList.remove('show');
+                }
+            });
         });
 
         let isChatCooldown = false;
@@ -250,7 +319,7 @@
 
         function spawnChips(amount, visualIdx) {
             const container = document.getElementById('chips-container');
-            const betZones = { 0: { left: 50, top: 78 }, 1: { left: 20, top: 72 }, 2: { left: 20, top: 28 }, 3: { left: 50, top: 22 }, 4: { left: 80, top: 28 }, 5: { left: 80, top: 72 } };
+            const betZones = { 0: { left: 50, top: 78 }, 1: { left: 25, top: 70 }, 2: { left: 15, top: 50 }, 3: { left: 25, top: 30 }, 4: { left: 50, top: 22 }, 5: { left: 75, top: 30 }, 6: { left: 85, top: 50 }, 7: { left: 75, top: 70 } };
             const zone = betZones[visualIdx] || {left: 50, top: 50};
             const denoms = [ { val: 500, color: '#8e44ad' }, { val: 100, color: '#2c3e50' }, { val: 50, color: '#e74c3c' }, { val: 10, color: '#3498db' }, { val: 1, color: '#ecf0f1' } ];
             let remaining = amount; let chipsToThrow = [];
@@ -289,7 +358,8 @@
             }, 600); 
         });
 
-        function getVisualSeatId(serverSeatIdx) { if (mySeatIndex === -1) return serverSeatIdx; return (serverSeatIdx - mySeatIndex + 6) % 6; }
+        function getVisualSeatId(serverSeatIdx) { if (mySeatIndex === -1) return serverSeatIdx; return (serverSeatIdx - mySeatIndex + 8) % 8; }
+        
         function toggleSeat(visualIdx) { const panel = document.getElementById(`seat-${visualIdx}`).querySelector('.player-panel'); if (expandedSeats.has(visualIdx)) { expandedSeats.delete(visualIdx); if (panel) panel.classList.remove('expanded'); } else { expandedSeats.add(visualIdx); if (panel) panel.classList.add('expanded'); } }
         function toggleMyCards() { isMyCardsPeeked = !isMyCardsPeeked; document.querySelectorAll('.my-card-container').forEach(el => { if (isMyCardsPeeked) el.classList.add('peeked'); else el.classList.remove('peeked'); }); }
         
@@ -323,7 +393,7 @@
             if (newCommCount > previousCommunityCount && data.gameState !== 'waiting') { for(let i = previousCommunityCount; i < newCommCount; i++) newlyRevealedIndices.push(i); }
             previousCommunityCount = newCommCount;
 
-            for(let i = 0; i < 6; i++) {
+            for(let i = 0; i < 8; i++) {
                 const p = data.seats[i];
                 if(p) {
                     if(previousChips[p.id] !== undefined && data.gameState !== 'waiting') {
@@ -338,10 +408,23 @@
             const stageNames = { 'waiting': '等待开始...', 'pre-flop': '翻牌前', 'flop': '翻牌圈', 'turn': '转牌圈', 'river': '河牌圈', 'showdown': '🚨 玩家亮牌对峙！ 🚨' };
             document.getElementById('stage-display').innerText = stageNames[data.gameState];
             
-            let lbHTML = `<div class="lb-title">🏆 财富榜</div><table class="lb-table"><tr><th>玩家</th><th>资产</th><th>欠款</th></tr>`;
+            if (window.isLbExpanded === undefined) { window.isLbExpanded = window.innerWidth > 768; }
+            window.toggleLeaderboard = function() {
+                window.isLbExpanded = !window.isLbExpanded;
+                document.getElementById('lb-content').style.display = window.isLbExpanded ? 'block' : 'none';
+                document.getElementById('lb-toggle-icon').innerText = window.isLbExpanded ? '🔽' : '▶️';
+            };
+
+            let displayStyle = window.isLbExpanded ? 'block' : 'none';
+            let icon = window.isLbExpanded ? '🔽' : '▶️';
+            
+            let lbHTML = `<div class="lb-title" onclick="toggleLeaderboard()" style="cursor:pointer; margin: 0;">🏆 财富榜 <span id="lb-toggle-icon">${icon}</span></div>
+                          <div id="lb-content" style="display: ${displayStyle}; margin-top: 8px;">
+                          <table class="lb-table"><tr><th>玩家</th><th>资产</th><th>欠款</th></tr>`;
             let activePlayers = data.seats.filter(s => s !== null).sort((a,b) => (b.chips - b.debt) - (a.chips - a.debt));
             activePlayers.forEach(p => { lbHTML += `<tr><td>${p.username}</td><td>${p.chips}</td><td style="color:#e74c3c;">${p.debt > 0 ? p.debt : '0'}</td></tr>`; });
-            lbHTML += `</table>`;
+            lbHTML += `</table></div>`;
+            
             let lbContainer = document.getElementById('leaderboard-container');
             if(!lbContainer) { lbContainer = document.createElement('div'); lbContainer.id = 'leaderboard-container'; document.getElementById('game-screen').appendChild(lbContainer); }
             lbContainer.innerHTML = lbHTML;
@@ -357,7 +440,7 @@
             }
             document.getElementById('community-cards-container').innerHTML = boardHTML;
             
-            for (let i = 0; i < 6; i++) {
+            for (let i = 0; i < 8; i++) {
                 const visualIdx = getVisualSeatId(i); const seatDiv = document.getElementById(`seat-${visualIdx}`); const player = data.seats[i];
                 if (!player) { seatDiv.innerHTML = `<div class="player-panel" style="opacity:0.3"><div class="nickname">空位</div></div>`; continue; }
                 
@@ -419,7 +502,6 @@
                 if (callDiff === 0) bar.innerHTML += `<button style="background:#f39c12;color:white;" onclick="socket.emit('playerAction', {type: 'check'})">✊ 过牌 (Check)</button>`;
                 else if (me.chips > callDiff) bar.innerHTML += `<button style="background:#3498db;color:white;" onclick="socket.emit('playerAction', {type: 'call'})">💵 跟注 (补 ${callDiff})</button>`;
                 
-                // 👉 动态加注列表
                 let maxRaise = me.chips - callDiff;
                 if (maxRaise > 0) {
                     let raiseAmounts = [50, 100, 200, 500, 1000, 2000];

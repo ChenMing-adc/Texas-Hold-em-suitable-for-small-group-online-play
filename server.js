@@ -34,10 +34,11 @@ function syncTableBalances() {
 }
 
 // ==========================================
-// 1. 核心状态与座位
+// 1. 核心状态与座位 (升级为 8 座位)
 // ==========================================
-let seats = [null, null, null, null, null, null]; 
-const avatars = ['🐶', '🐱', '🦊', '🐻', '🐼', '🦁']; 
+// 👉 核心修改：座位扩充为 8 个，头像增加老虎和兔子
+let seats = [null, null, null, null, null, null, null, null]; 
+const avatars = ['🐶', '🐱', '🦊', '🐻', '🐼', '🦁', '🐯', '🐰']; 
 let communityCards = []; 
 let pot = 0; 
 let gameState = 'waiting'; 
@@ -213,15 +214,16 @@ io.on('connection', (socket) => {
         }
 
         let emptySeatIdx = seats.findIndex(s => s === null);
-        if (emptySeatIdx === -1) return socket.emit('loginError', '房间已满！');
+        if (emptySeatIdx === -1) return socket.emit('loginError', '房间已满 (8/8)！');
         
         let balances = loadBalances();
         let playerChips = balances[username]?.chips !== undefined ? balances[username].chips : 1000;
         let playerDebt = balances[username]?.debt !== undefined ? balances[username].debt : 0;
         let initialStatus = playerChips <= 0 ? 'spectator' : 'waiting'; 
 
+        // 👉 核心修改：基于 8 个座位的头像取模
         seats[emptySeatIdx] = { 
-            id: socket.id, username: username, avatar: avatars[emptySeatIdx%6], 
+            id: socket.id, username: username, avatar: avatars[emptySeatIdx % 8], 
             chips: playerChips, debt: playerDebt, status: initialStatus, 
             isReady: false, isWinner: false, hasRevealed: false, 
             holeCards: [], roundBet: 0, acted: false, 
@@ -294,7 +296,7 @@ io.on('connection', (socket) => {
         else if (action.type === 'check') { if (p.roundBet === currentHighestBet) { p.acted = true; io.emit('chatBubble', { seatIdx: socket.seatIdx, text: '过牌 ✊' }); } } 
         else if (action.type === 'call') { let callAmount = currentHighestBet - p.roundBet; if (p.chips >= callAmount) { p.chips -= callAmount; pot += callAmount; p.roundBet += callAmount; p.acted = true; io.emit('chatBubble', { seatIdx: socket.seatIdx, text: `跟注 ${callAmount} 💵` }); } } 
         else if (action.type === 'raise') {
-            let raiseAmount = parseInt(action.amount); // 安全校验
+            let raiseAmount = parseInt(action.amount); 
             if (isNaN(raiseAmount) || raiseAmount <= 0) return; 
 
             let callAmount = currentHighestBet - p.roundBet; let totalCost = callAmount + raiseAmount;
