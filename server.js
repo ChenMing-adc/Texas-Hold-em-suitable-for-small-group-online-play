@@ -102,7 +102,17 @@ function nextStage() {
     
     if (gameState !== 'pre-flop' && gameState !== 'showdown' && gameState !== 'waiting') {
         currentTurnIndex = 0;
-        while(seats[playerOrder[currentTurnIndex]].status !== 'playing') currentTurnIndex = (currentTurnIndex + 1) % playerOrder.length;
+        let loopCount = 0;
+        // 核心修改：跳过已经弃牌，或者筹码已经为 0 (All-in) 的玩家
+        while((seats[playerOrder[currentTurnIndex]].status !== 'playing' || seats[playerOrder[currentTurnIndex]].chips === 0) && loopCount < playerOrder.length) {
+            currentTurnIndex = (currentTurnIndex + 1) % playerOrder.length;
+            loopCount++;
+        }
+        // 如果所有人都没有筹码了，直接进入下一阶段
+        if (loopCount >= playerOrder.length) {
+            setTimeout(nextStage, 1000); // 自动推进
+            return; 
+        }
     }
     broadcastTable();
 }
@@ -202,20 +212,48 @@ io.on('connection', (socket) => {
 
         if (action.type === 'fold') { p.status = 'folded'; p.acted = true; io.emit('chatBubble', { seatIdx: socket.seatIdx, text: '弃牌 🏳️' }); } 
         else if (action.type === 'check') { if (p.roundBet === currentHighestBet) { p.acted = true; io.emit('chatBubble', { seatIdx: socket.seatIdx, text: '过牌 ✊' }); } } 
-        else if (action.type === 'call') { let callAmount = currentHighestBet - p.roundBet; if (p.chips >= callAmount) { p.chips -= callAmount; pot += callAmount; p.roundBet += callAmount; p.acted = true; io.emit('chatBubble', { seatIdx: socket.seatIdx, text: `跟注 ${callAmount} 💵` }); } } 
+        else if (action.type === 'call') { 
+            let callAmount = currentHighestBet - p.roundBet; 
+            if (p.chips >= callAmount) { p.chips -= callAmount; pot += callAmount; p.roundBet += callAmount; p.acted = true; io.emit('chatBubble', { seatIdx: socket.seatIdx, text: `跟注 ${callAmount} 💵` }); } 
+        } 
         else if (action.type === 'raise') {
             let raiseAmount = action.amount; let callAmount = currentHighestBet - p.roundBet; let totalCost = callAmount + raiseAmount;
             if (p.chips >= totalCost) {
                 p.chips -= totalCost; pot += totalCost; p.roundBet += totalCost; p.acted = true; currentHighestBet = p.roundBet;
-                seats.forEach(other => { if (other && other.id !== p.id && other.status === 'playing') other.acted = false; });
+                seats.forEach(other => { if (other && other.id !== p.id && other.status === 'playing' && other.chips > 0) other.acted = false; });
                 io.emit('chatBubble', { seatIdx: socket.seatIdx, text: `加注 ${raiseAmount} 🔥` });
             }
+        }
+        // 👇 新增 All-in 逻辑
+        else if (action.type === 'all-in') {
+            let allInAmount = p.chips;
+            p.chips = 0; pot += allInAmount; p.roundBet += allInAmount; p.acted = true;
+            if (p.roundBet > currentHighestBet) {
+                currentHighestBet = p.roundBet;
+                // 其他没弃牌且还有筹码的玩家，需要重新表态
+                seats.forEach(other => { if (other && other.id !== p.id && other.status === 'playing' && other.chips > 0) other.acted = false; });
+            }
+            io.emit('chatBubble', { seatIdx: socket.seatIdx, text: `梭哈 All-In! 🌋` });
         }
 
         let playingPlayers = playerOrder.map(idx => seats[idx]).filter(s => s.status === 'playing');
         if (playingPlayers.length <= 1) { gameState = 'showdown'; evaluateWinner(); broadcastTable(); return; }
-        let allActed = playingPlayers.every(s => s.acted === true);
-        if (allActed) { nextStage(); } else { do { currentTurnIndex = (currentTurnIndex + 1) % playerOrder.length; } while (seats[playerOrder[currentTurnIndex]].status !== 'playing' || seats[playerOrder[currentTurnIndex]].acted === true); broadcastTable(); }
+        
+        // 核心修改：判断是否所有有筹码的玩家都已经表态
+        let allActed = playingPlayers.every(s => s.acted === true || s.chips === 0);
+        
+        if (allActed) { 
+            nextStage(); 
+        } else { 
+            let loopCount = 0;
+            do { 
+                currentTurnIndex = (currentTurnIndex + 1) % playerOrder.length; 
+                loopCount++;
+            } while ((seats[playerOrder[currentTurnIndex]].status !== 'playing' || seats[playerOrder[currentTurnIndex]].acted === true || seats[playerOrder[currentTurnIndex]].chips === 0) && loopCount < playerOrder.length); 
+            
+            if (loopCount >= playerOrder.length) nextStage(); // 如果一圈下来发现没人能动了，自动发牌
+            else broadcastTable(); 
+        }
     });
 
     socket.on('disconnect', () => { if (socket.seatIdx !== undefined) { seats[socket.seatIdx] = null; broadcastTable(); } });

@@ -19,7 +19,7 @@
 
         #game-screen { display: none; width: 100vw; height: 100vh; position: relative; }
         
-        /* 2. 响应式牌桌：使用 vw (视口宽度) 替代固定 px，使用 50% 完美绘制椭圆 */
+        /* 响应式牌桌 */
         .poker-table { 
             position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); 
             width: 85vw; max-width: 900px; 
@@ -29,9 +29,43 @@
             box-shadow: 0 0 clamp(10px, 4vw, 50px) rgba(0,0,0,0.5) inset; 
         }
         
-        .table-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; width: 100%; z-index: 0;}
-        .pot { font-size: clamp(16px, 2.5vw, 24px); color: #f1c40f; font-weight: bold; background: rgba(0,0,0,0.5); padding: 5px 20px; border-radius: 20px; display: inline-block; margin-bottom: 60px;}
-        .stage { color: #ecf0f1; margin-top: 5px; font-size: clamp(14px, 2vw, 18px); position: absolute; width: 100%; bottom: -40px; left: 0;}
+        /* 👉 👉 👉 👉 核心修改点 👉 👉 👉 👉 */
+        /* 牌桌中心信息区域（奖池和阶段描述）*/
+        .table-center { 
+            position: absolute; 
+            /* 1. 将原固定的 top: 50% 修改为 top: 20%，使其固定在牌桌上半部分 */
+            top: 20%; 
+            left: 50%; 
+            /* 2. transform 只保留水平居中偏移，移除垂直偏移 */
+            transform: translateX(-50%); 
+            text-align: center; 
+            width: 100%; 
+            z-index: 1; /* 确保在最底层，防止遮挡座位信息 bubble 等 */
+        }
+        
+        /* 奖池样式 */
+        .pot { 
+            font-size: clamp(16px, 2.5vw, 24px); 
+            color: #f1c40f; 
+            font-weight: bold; 
+            background: rgba(0,0,0,0.5); 
+            padding: 5px 20px; 
+            border-radius: 20px; 
+            display: inline-block; 
+            margin-bottom: 5px; /* 3. 移除原过大的下边距 */
+        }
+        
+        /* 游戏阶段样式 (e.g., 翻牌前，河牌圈) */
+        .stage { 
+            color: #ecf0f1; 
+            margin-top: 2px; 
+            font-size: clamp(12px, 1.8vw, 16px); /* 4. 略微调小字体，防止在竖屏下太挤 */
+            position: static; /* 5. 取消原绝对定位，使用标准文档流排在奖池下方 */
+            width: 100%; 
+            left: 0;
+            opacity: 0.8;
+        }
+        /* 👉 👉 👉 👉 修改结束 👉 👉 👉 👉 */
         
         .community-cards { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; gap: clamp(3px, 1vw, 10px); z-index: 2;}
         .card { width: clamp(40px, 6vw, 60px); height: clamp(56px, 8.5vw, 85px); background: white; border-radius: 5px; color: black; font-size: clamp(14px, 2vw, 20px); font-weight: bold; display: flex; justify-content: center; align-items: center; box-shadow: 2px 2px 5px rgba(0,0,0,0.5); animation: dealAnim 0.5s ease-out; }
@@ -39,7 +73,7 @@
         .card.hidden { background: #2980b9; border: 2px solid white; background-image: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(255,255,255,.2) 5px, rgba(255,255,255,.2) 10px); color: transparent;}
         @keyframes dealAnim { from { transform: translateY(-50px) scale(0); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
 
-        /* 3. 响应式座位：用百分比贴合椭圆桌边缘，用 translate(-50%, -50%) 找准中心点 */
+        /* 响应式座位布局：基于百分比和 clamp */
         .seat { position: absolute; width: clamp(80px, 12vw, 130px); text-align: center; transform: translate(-50%, -50%); z-index: 10;}
         .seat-0 { top: 100%; left: 50%; } 
         .seat-1 { top: 85%; left: 0%; } 
@@ -75,23 +109,27 @@
         #chat-input-area input { padding: 10px; border-radius: 20px; border: none; outline: none; width: 150px;}
         #chat-input-area button { padding: 10px 15px; border-radius: 20px; border: none; background: #3498db; color: white; cursor: pointer;}
 
-        /* 4. 针对手机端 (竖屏) 的极限压缩排版 */
+        /* 移动端竖屏排版优化 */
         @media (max-width: 768px) {
-            .poker-table { width: 90vw; height: 130vw; max-height: 60vh; border-radius: 150px; } /* 手机上让桌子变成竖长椭圆 */
+            .poker-table { width: 90vw; height: 130vw; max-height: 60vh; border-radius: 150px; }
             .seat-1 { top: 75%; left: 0%; } 
             .seat-2 { top: 25%; left: 0%; } 
             .seat-4 { top: 25%; left: 100%; } 
             .seat-5 { top: 75%; left: 100%; } 
             
             #control-bar { width: 95vw; flex-wrap: wrap; justify-content: center; bottom: 10px; padding: 8px;}
-            #control-bar button { padding: 10px 5px; font-size: 14px; flex: 1 1 45%; } /* 按钮分两排 */
+            #control-bar button { padding: 10px 5px; font-size: 14px; flex: 1 1 45%; } 
             
-            #chat-input-area { bottom: auto; top: 10px; left: 10px; } /* 手机上聊天框移到顶部左侧 */
+            #chat-input-area { bottom: auto; top: 10px; left: 10px; } 
             #chat-input-area input { width: 100px; padding: 6px; }
             #chat-input-area button { padding: 6px 10px; font-size: 12px;}
             
             #top-bar { top: 10px; right: 10px; }
             #top-bar button { padding: 6px 10px; font-size: 12px; }
+            
+            /* 👉 移动端适配修改：防止移动端竖屏椭圆桌下信息依然重叠 👉 */
+            .table-center { top: 12vh; /* 使用 vh 相对屏幕高度定位 */ }
+            /* 👉 修改结束 👉 */
         }
     </style>
 </head>
@@ -136,7 +174,14 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
-        let mySeatIndex = -1;
+        let mySeatIndex = -1; // 记录自己在服务器里的真实座位号
+
+        // 视角转换核心函数：计算服务器座位对应到当前屏幕的哪一个视觉座位 (永远把自己放在 0 号位置)
+        function getVisualSeatId(serverSeatIdx) {
+            if (mySeatIndex === -1) return serverSeatIdx; // 还没坐下时，默认直接映射
+            return (serverSeatIdx - mySeatIndex + 6) % 6;
+        }
+
         function createCardHTML(cardData) {
             if (cardData === 'hidden') return `<div class="card hidden"></div>`;
             const isRed = cardData.suit === '♥️' || cardData.suit === '♦️';
@@ -152,7 +197,7 @@
         
         socket.on('loginError', (msg) => { document.getElementById('login-error-msg').innerText = msg; });
         socket.on('loginSuccess', (seatIdx) => { 
-            mySeatIndex = seatIdx; 
+            mySeatIndex = seatIdx; // 登录成功，记住自己的真实座位
             document.getElementById('login-screen').style.display = 'none'; 
             document.getElementById('game-screen').style.display = 'block'; 
             document.getElementById('top-bar').style.display = 'block';
@@ -172,10 +217,15 @@
             const boardHTML = data.communityCards.map(c => createCardHTML(c)).join('');
             document.getElementById('community-cards-container').innerHTML = boardHTML;
             
+            // 遍历服务器上的 6 个座位数据
             for (let i = 0; i < 6; i++) {
-                const seatDiv = document.getElementById(`seat-${i}`);
+                // 将服务器座位 i 转换为屏幕上的视觉座位 visualIdx
+                const visualIdx = getVisualSeatId(i);
+                const seatDiv = document.getElementById(`seat-${visualIdx}`);
                 const player = data.seats[i];
+                
                 if (!player) { seatDiv.innerHTML = `<div class="player-panel" style="opacity:0.3"><div class="nickname">空位</div></div>`; continue; }
+                
                 let holeCardsHTML = '';
                 if (player.holeCards && player.holeCards.length > 0) {
                     let showCards = (data.gameState === 'showdown') || (i === mySeatIndex);
@@ -189,6 +239,7 @@
                 else if (player.role === '小盲') roleHTML = `<div class="role-badge sb">SB 10</div>`;
                 else if (player.role === '大盲') roleHTML = `<div class="role-badge bb">BB 20</div>`;
                 
+                // 渲染 UI
                 seatDiv.innerHTML = `
                     <div class="player-panel ${isTurn}">
                         ${crownHTML} ${roleHTML}
@@ -201,6 +252,7 @@
                 `;
             }
             
+            // 渲染控制栏 (基于自己的数据)
             const bar = document.getElementById('control-bar'); bar.innerHTML = ''; 
             const me = data.seats[mySeatIndex]; if (!me) return;
             
@@ -212,16 +264,35 @@
             } 
             else if (data.gameState !== 'waiting' && data.gameState !== 'showdown' && data.currentTurnSeatIdx === mySeatIndex) {
                 let callDiff = data.currentHighestBet - me.roundBet; 
+                
                 bar.innerHTML += `<button style="background:#95a5a6;color:white;" onclick="socket.emit('playerAction', {type: 'fold'})">🏳️ 弃牌</button>`;
-                if (callDiff === 0) bar.innerHTML += `<button style="background:#f39c12;color:white;" onclick="socket.emit('playerAction', {type: 'check'})">✊ 过牌 (Check)</button>`;
-                else bar.innerHTML += `<button style="background:#3498db;color:white;" onclick="socket.emit('playerAction', {type: 'call'})">💵 跟注 (补 ${callDiff})</button>`;
-                bar.innerHTML += `<button style="background:#e74c3c;color:white;" onclick="socket.emit('playerAction', {type: 'raise', amount: 50})">🔥 加注 (再加 50)</button>`;
+                
+                if (callDiff === 0) {
+                    bar.innerHTML += `<button style="background:#f39c12;color:white;" onclick="socket.emit('playerAction', {type: 'check'})">✊ 过牌 (Check)</button>`;
+                } else if (me.chips > callDiff) {
+                    // 如果筹码比需要跟注的钱多，才显示跟注按钮
+                    bar.innerHTML += `<button style="background:#3498db;color:white;" onclick="socket.emit('playerAction', {type: 'call'})">💵 跟注 (补 ${callDiff})</button>`;
+                }
+                
+                if (me.chips > callDiff + 50) {
+                    // 如果筹码足够支付跟注和加注，才显示加注按钮
+                    bar.innerHTML += `<button style="background:#e74c3c;color:white;" onclick="socket.emit('playerAction', {type: 'raise', amount: 50})">🔥 加注 (再加 50)</button>`;
+                }
+                
+                // 新增：永远显示 All-In 按钮（只要还有筹码）
+                if (me.chips > 0) {
+                    bar.innerHTML += `<button style="background:#8e44ad;color:white;box-shadow: 0 0 10px #8e44ad;" onclick="socket.emit('playerAction', {type: 'all-in'})">🌋 All-In (${me.chips})</button>`;
+                }
             }
         });
         
         function sendChat() { const input = document.getElementById('chat-input'); if (input.value) { socket.emit('chatMessage', input.value); input.value = ''; } }
+        
+        // 聊天气泡同样需要经过视角转换
         socket.on('chatBubble', (data) => {
-            const seatDiv = document.getElementById(`seat-${data.seatIdx}`); if (!seatDiv) return;
+            const visualIdx = getVisualSeatId(data.seatIdx);
+            const seatDiv = document.getElementById(`seat-${visualIdx}`); 
+            if (!seatDiv) return;
             const bubble = document.createElement('div'); bubble.className = 'chat-bubble'; bubble.innerText = data.text;
             seatDiv.appendChild(bubble); setTimeout(() => { bubble.remove(); }, 3000);
         });
