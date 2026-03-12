@@ -8,35 +8,30 @@ const fs = require('fs');
 app.use(express.static(__dirname));
 
 // ==========================================
-// 0. 本地数据库管理 (包含密码库和资产库)
+// 0. 本地数据库管理
 // ==========================================
 const USERS_FILE = 'users.json';
 const BALANCES_FILE = 'balances.json'; 
+const AVATARS_FILE = 'avatars.json'; 
 
-function loadUsers() {
-    try { return JSON.parse(fs.readFileSync(USERS_FILE, 'utf8')); } 
-    catch (err) { return {}; }
-}
+function loadUsers() { try { return JSON.parse(fs.readFileSync(USERS_FILE, 'utf8')); } catch (err) { return {}; } }
 function saveUsers(data) { fs.writeFileSync(USERS_FILE, JSON.stringify(data, null, 2)); }
 
-function loadBalances() {
-    try { return JSON.parse(fs.readFileSync(BALANCES_FILE, 'utf8')); } 
-    catch (err) { return {}; }
-}
+function loadBalances() { try { return JSON.parse(fs.readFileSync(BALANCES_FILE, 'utf8')); } catch (err) { return {}; } }
 function saveBalances(data) { fs.writeFileSync(BALANCES_FILE, JSON.stringify(data, null, 2)); }
 
 function syncTableBalances() {
     let balances = loadBalances();
-    seats.forEach(p => {
-        if (p) { balances[p.username] = { chips: p.chips, debt: p.debt }; }
-    });
+    seats.forEach(p => { if (p) { balances[p.username] = { chips: p.chips, debt: p.debt }; } });
     saveBalances(balances);
 }
 
+function loadAvatars() { try { return JSON.parse(fs.readFileSync(AVATARS_FILE, 'utf8')); } catch (err) { return {}; } }
+function saveAvatars(data) { fs.writeFileSync(AVATARS_FILE, JSON.stringify(data, null, 2)); }
+
 // ==========================================
-// 1. 核心状态与座位 (升级为 8 座位)
+// 1. 核心状态与座位
 // ==========================================
-// 👉 核心修改：座位扩充为 8 个，头像增加老虎和兔子
 let seats = [null, null, null, null, null, null, null, null]; 
 const avatars = ['🐶', '🐱', '🦊', '🐻', '🐼', '🦁', '🐯', '🐰']; 
 let communityCards = []; 
@@ -122,17 +117,43 @@ function nextStage() {
     broadcastTable();
 }
 
+// 👉 核心修正：写一个终极清空状态函数，防止任何人卡壳
+function resetTableForNextRound() {
+    pot = 0; 
+    gameState = 'waiting'; 
+    currentHighestBet = 0;
+    
+    seats.forEach(p => { 
+        if (p) {
+            p.isWinner = false;
+            p.hasRevealed = false;
+            p.acted = false;
+            p.roundBet = 0;
+            p.isReady = false; // 所有人强制清空准备状态
+            
+            if (p.chips <= 0) {
+                p.status = 'spectator'; // 没钱的踢去观战
+            } else {
+                p.status = 'waiting';   // 有钱的一律变成等待中
+            }
+        }
+    });
+
+    syncTableBalances(); 
+    broadcastTable();
+}
+
 function evaluateWinner() {
     let activePlayers = playerOrder.filter(idx => seats[idx] && seats[idx].status === 'playing');
+    
     if (activePlayers.length === 1) {
         let winner = seats[activePlayers[0]]; 
         io.emit('chatMessage', { user: '🏆 战报', text: `其他人都弃牌了，【${winner.username}】赢走 ${pot} 筹码！` });
         io.emit('settlePot', { winners: [activePlayers[0]], splitPot: pot });
         setTimeout(() => {
-            winner.chips += pot; winner.isWinner = true; pot = 0; gameState = 'waiting'; 
-            seats.forEach(p => { if (p && p.chips <= 0) p.status = 'spectator'; });
-            syncTableBalances(); 
-            broadcastTable();
+            winner.chips += pot; 
+            winner.isWinner = true; 
+            resetTableForNextRound(); // 👉 调用终极清理
         }, 2500);
         return;
     }
@@ -154,10 +175,7 @@ function evaluateWinner() {
         
         setTimeout(() => {
             winners.forEach(w => { seats[w.seatIdx].chips += splitPot; seats[w.seatIdx].isWinner = true; });
-            pot = 0; gameState = 'waiting'; 
-            seats.forEach(p => { if (p && p.chips <= 0) p.status = 'spectator'; });
-            syncTableBalances(); 
-            broadcastTable();
+            resetTableForNextRound(); // 👉 调用终极清理
         }, 2500);
     }
 }
@@ -221,9 +239,11 @@ io.on('connection', (socket) => {
         let playerDebt = balances[username]?.debt !== undefined ? balances[username].debt : 0;
         let initialStatus = playerChips <= 0 ? 'spectator' : 'waiting'; 
 
-        // 👉 核心修改：基于 8 个座位的头像取模
+        let avatarsDB = loadAvatars();
+        let playerAvatar = avatarsDB[username] || avatars[emptySeatIdx % 8];
+
         seats[emptySeatIdx] = { 
-            id: socket.id, username: username, avatar: avatars[emptySeatIdx % 8], 
+            id: socket.id, username: username, avatar: playerAvatar, 
             chips: playerChips, debt: playerDebt, status: initialStatus, 
             isReady: false, isWinner: false, hasRevealed: false, 
             holeCards: [], roundBet: 0, acted: false, 
@@ -241,7 +261,31 @@ io.on('connection', (socket) => {
         else { socket.emit('passwordChangeFailed', '原密码错误！'); }
     });
 
-    socket.on('chatMessage', (msg) => { if (socket.seatIdx !== undefined) io.emit('chatBubble', { seatIdx: socket.seatIdx, text: msg }); });
+    socket.on('updateAvatar', (base64Image) => {
+        if (socket.seatIdx !== undefined && seats[socket.seatIdx]) {
+            if (base64Image.length > 2 * 1024 * 1024) return;
+            seats[socket.seatIdx].avatar = base64Image;
+            let avatarsDB = loadAvatars();
+            avatarsDB[socket.username] = base64Image;
+            saveAvatars(avatarsDB);
+            socket.emit('avatarUpdated', '头像更新成功！');
+            broadcastTable();
+        }
+    });
+
+    socket.on('chatMessage', (msg) => { 
+        if (socket.seatIdx !== undefined) {
+            let safeMsg = msg;
+            if (safeMsg.length > 30) safeMsg = safeMsg.substring(0, 30) + '...';
+            io.emit('chatBubble', { seatIdx: socket.seatIdx, text: safeMsg }); 
+        }
+    });
+
+    socket.on('throwItem', (data) => {
+        if (socket.seatIdx !== undefined && seats[socket.seatIdx]) {
+            io.emit('itemThrown', { from: socket.seatIdx, to: data.target, item: data.item });
+        }
+    });
 
     socket.on('ready', () => {
         if (gameState !== 'waiting' && gameState !== 'showdown') return;
@@ -252,6 +296,14 @@ io.on('connection', (socket) => {
         p.isReady = true;
         let activePlayers = seats.filter(s => s !== null && s.status !== 'spectator' && !s.isDisconnected);
         if (activePlayers.length >= 2 && activePlayers.every(player => player.isReady)) { gameState = 'waiting'; nextStage(); } else { broadcastTable(); }
+    });
+
+    socket.on('cancelReady', () => {
+        if (gameState !== 'waiting') return;
+        let p = seats[socket.seatIdx];
+        if (!p || p.isDisconnected) return;
+        p.isReady = false;
+        broadcastTable();
     });
 
     socket.on('borrow', () => {

@@ -4,73 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Web 德州扑克 - 巅峰版</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
     <style>
         * { box-sizing: border-box; }
-        body { 
-            font-family: sans-serif; 
-            background-color: #1a1a2e; 
-            color: white; 
-            margin: 0; 
-            width: 100vw;
-            height: 100dvh;
-            overflow: hidden; 
-            position: fixed; 
-            top: 0; 
-            left: 0;
-            touch-action: none; 
-        }
+        body { font-family: sans-serif; background-color: #1a1a2e; color: white; margin: 0; width: 100vw; height: 100dvh; overflow: hidden; position: fixed; top: 0; left: 0; touch-action: none; }
+        
         #login-screen { position: absolute; width: 100vw; height: 100vh; background: #16213e; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; }
         #login-screen input { padding: 15px; font-size: 18px; border-radius: 8px; border: none; margin-bottom: 20px; text-align: center; width: 80%; max-width: 300px;}
         #login-screen button { padding: 15px 30px; font-size: 18px; background: #e94560; color: white; border: none; border-radius: 8px; cursor: pointer; }
         #login-error-msg { color: #e74c3c; font-weight: bold; margin-bottom: 10px; }
-        .modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #2c3e50; padding: 20px; border-radius: 10px; z-index: 200; border: 2px solid #e74c3c; text-align: center; width: 80%; max-width: 300px;}
-        .modal input { display: block; width: 80%; margin: 10px auto; padding: 10px; border-radius: 5px; border: none; }
-        .modal button { margin-top: 15px; background: #2ecc71; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;}
-        #btn-close-modal { background: #95a5a6; margin-left: 10px; }
+        
+        .modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #2c3e50; padding: 20px; border-radius: 10px; z-index: 200; border: 2px solid #e74c3c; text-align: center; width: 80%; max-width: 340px; max-height: 90vh; overflow-y: auto;}
+        .modal input { display: block; width: 100%; margin: 10px auto; padding: 10px; border-radius: 5px; border: none; box-sizing: border-box;}
+        .modal button { margin-top: 10px; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;}
+        
         #game-screen { display: none; width: 100%; height: 100%; position: relative; }
         
-        /* 👉 核心修改 1：奖池改为居中隐藏的弹窗样式 */
-        #pot-container { 
-            position: fixed; 
-            top: 40%; 
-            left: 50%; 
-            transform: translate(-50%, -50%) scale(0.5); 
-            opacity: 0; 
-            pointer-events: none; 
-            z-index: 300; 
-            background: rgba(22, 33, 62, 0.95); 
-            padding: 20px 40px; 
-            border-radius: 20px; 
-            border: 3px solid #f1c40f; 
-            box-shadow: 0 10px 40px rgba(0,0,0,0.9); 
-            display: flex; 
-            flex-direction: column; 
-            gap: 10px; 
-            text-align: center;
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
-        }
-        /* 当被激活时放大显示 */
-        #pot-container.show {
-            opacity: 1;
-            transform: translate(-50%, -50%) scale(1.2);
-            pointer-events: auto;
-        }
+        #pot-container { position: fixed; top: 40%; left: 50%; transform: translate(-50%, -50%) scale(0.5); opacity: 0; pointer-events: none; z-index: 300; background: rgba(22, 33, 62, 0.95); padding: 20px 40px; border-radius: 20px; border: 3px solid #f1c40f; box-shadow: 0 10px 40px rgba(0,0,0,0.9); display: flex; flex-direction: column; gap: 10px; text-align: center; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        #pot-container.show { opacity: 1; transform: translate(-50%, -50%) scale(1.2); pointer-events: auto; }
         .pot { font-size: clamp(20px, 3.5vw, 30px); color: #f1c40f; font-weight: bold; text-shadow: 0 0 10px rgba(241, 196, 15, 0.5); }
         .stage { color: #ecf0f1; font-size: clamp(14px, 2vw, 18px); font-weight: bold; opacity: 0.9;}
 
-        /* 桌子中央的浅色提示文字 */
-        .table-hint {
-            position: absolute;
-            top: 35%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: rgba(255,255,255,0.4);
-            font-size: clamp(12px, 2vw, 16px);
-            font-weight: bold;
-            pointer-events: none;
-            z-index: 1;
-            text-shadow: 0 0 5px rgba(0,0,0,0.5);
-        }
+        .table-hint { position: absolute; top: 35%; left: 50%; transform: translate(-50%, -50%); color: rgba(255,255,255,0.4); font-size: clamp(12px, 2vw, 16px); font-weight: bold; pointer-events: none; z-index: 1; text-shadow: 0 0 5px rgba(0,0,0,0.5); }
 
         #leaderboard-container { position: fixed; top: 90px; left: 20px; z-index: 100; background: rgba(22, 33, 62, 0.85); padding: 10px; border-radius: 12px; border: 2px solid #3498db; box-shadow: 0 5px 20px rgba(0,0,0,0.6); color: white; width: max-content; min-width: 120px; transition: all 0.3s; }
         .lb-title { font-weight: bold; margin-bottom: 5px; text-align: center; color: #3498db; font-size: 14px; }
@@ -78,7 +33,7 @@
         .lb-table th { color: #f1c40f; border-bottom: 1px solid #444; padding-bottom: 3px; }
         .lb-table td { padding-top: 4px; border-bottom: 1px solid rgba(255,255,255,0.05); }
 
-        .poker-table { position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); width: 85vw; max-width: 900px; height: 45vw; max-height: 450px; background: #27ae60; border-radius: 50%; border: clamp(5px, 1.5vw, 15px) solid #2c3e50; box-shadow: 0 0 clamp(10px, 4vw, 50px) rgba(0,0,0,0.5) inset; cursor: pointer; /* 增加鼠标手势暗示可点击 */ }
+        .poker-table { position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); width: 85vw; max-width: 900px; height: 45vw; max-height: 450px; background: #27ae60; border-radius: 50%; border: clamp(5px, 1.5vw, 15px) solid #2c3e50; box-shadow: 0 0 clamp(10px, 4vw, 50px) rgba(0,0,0,0.5) inset; cursor: pointer; }
         
         #deck-container { position: absolute; top: 25%; left: 65%; transform: translate(-50%, -50%); z-index: 4; }
         .deck-card { position: absolute; box-shadow: 2px 2px 5px rgba(0,0,0,0.8); }
@@ -100,24 +55,18 @@
         @keyframes floatMoneyAnim { 0% { opacity: 1; transform: translate(-50%, 0) scale(1); } 100% { opacity: 0; transform: translate(-50%, -80px) scale(1.2); } }
 
         .seat { position: absolute; width: clamp(80px, 12vw, 130px); text-align: center; transform: translate(-50%, -50%); z-index: 10; cursor: default;}
-        .seat-0 { top: 100%; left: 50%; } 
-        .seat-1 { top: 85%; left: 10%; } 
-        .seat-2 { top: 50%; left: 0%; } 
-        .seat-3 { top: 15%; left: 10%; } 
-        .seat-4 { top: 0%; left: 50%; } 
-        .seat-5 { top: 15%; left: 90%; } 
-        .seat-6 { top: 50%; left: 100%; } 
-        .seat-7 { top: 85%; left: 90%; } 
+        .seat-0 { top: 100%; left: 50%; } .seat-1 { top: 85%; left: 10%; } .seat-2 { top: 50%; left: 0%; } .seat-3 { top: 15%; left: 10%; } 
+        .seat-4 { top: 0%; left: 50%; } .seat-5 { top: 15%; left: 90%; } .seat-6 { top: 50%; left: 100%; } .seat-7 { top: 85%; left: 90%; } 
 
         .player-panel { position: relative; background: #34495e; padding: clamp(5px, 1vw, 10px); border-radius: 10px; border: 3px solid transparent; transition: all 0.3s; z-index: 15; cursor: pointer;}
         .player-panel.active-turn { border-color: #f1c40f; box-shadow: 0 0 15px #f1c40f; transform: scale(1.05); }
         .player-basic { display: flex; flex-direction: column; align-items: center; pointer-events: none; }
-        .avatar { font-size: clamp(25px, 4vw, 40px); margin: 0; }
+        .avatar { font-size: clamp(25px, 4vw, 40px); width: clamp(35px, 5.5vw, 55px); height: clamp(35px, 5.5vw, 55px); display: flex; align-items: center; justify-content: center; margin: 0 auto; border-radius: 50%; overflow: hidden;}
+        .details-avatar { font-size: 45px; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; margin: 0 auto 5px auto; border-radius: 50%; overflow: hidden;}
         .chips { font-size: clamp(12px, 1.5vw, 14px); color: #f1c40f; margin-top: 5px; font-weight: bold;}
         
         .player-details { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.4); opacity: 0; pointer-events: none; background: rgba(22, 33, 62, 0.95); border: 2px solid #3498db; border-radius: 12px; padding: 15px; z-index: 200; min-width: 140px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
         .player-panel.expanded .player-details { transform: translate(-50%, -50%) scale(1); opacity: 1; pointer-events: auto; }
-        .details-avatar { font-size: 45px; margin-bottom: 5px; }
         .details-name { font-size: 16px; font-weight: bold; color: white; margin-bottom: 8px; border-bottom: 1px solid #444; padding-bottom: 5px; }
         .details-info { font-size: 13px; color: #bdc3c7; line-height: 1.6; text-align: left;}
         .details-info span { color: #f1c40f; font-weight: bold; }
@@ -138,9 +87,25 @@
         .flip-front { background: #2980b9; border: 2px solid white; background-image: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(255,255,255,.2) 5px, rgba(255,255,255,.2) 10px); } 
         .flip-back { background: white; transform: rotateY(180deg); font-weight: bold; } 
 
-        .chat-bubble { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: white; color: black; padding: 5px 10px; border-radius: 10px; font-size: 14px; font-weight: bold; white-space: nowrap; margin-bottom: 10px; animation: popIn 0.3s ease; z-index: 50; }
-        .chat-bubble::after { content: ''; position: absolute; top: 100%; left: 50%; margin-left: -5px; border-width: 5px; border-style: solid; border-color: white transparent transparent transparent; }
-        @keyframes popIn { 0% { transform: translateX(-50%) scale(0); } 100% { transform: translateX(-50%) scale(1); } }
+        /* 👉 气泡新样式：智能四个方向弹出 */
+        .chat-bubble { position: absolute; background: white; color: black; padding: 5px 10px; border-radius: 10px; font-size: 14px; font-weight: bold; white-space: nowrap; z-index: 999; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        .chat-bubble::after { content: ''; position: absolute; border-width: 5px; border-style: solid; }
+        
+        .bubble-up { bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 12px; transform-origin: bottom center; animation: popUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .bubble-up::after { top: 100%; left: 50%; margin-left: -5px; border-color: white transparent transparent transparent; }
+        @keyframes popUp { 0% { transform: translateX(-50%) scale(0); } 100% { transform: translateX(-50%) scale(1); } }
+
+        .bubble-down { top: 100%; left: 50%; transform: translateX(-50%); margin-top: 12px; transform-origin: top center; animation: popDown 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .bubble-down::after { bottom: 100%; left: 50%; margin-left: -5px; border-color: transparent transparent white transparent; }
+        @keyframes popDown { 0% { transform: translateX(-50%) scale(0); } 100% { transform: translateX(-50%) scale(1); } }
+
+        .bubble-right { top: 50%; left: 100%; transform: translateY(-50%); margin-left: 12px; transform-origin: center left; animation: popRight 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .bubble-right::after { top: 50%; right: 100%; margin-top: -5px; border-color: transparent white transparent transparent; }
+        @keyframes popRight { 0% { transform: translateY(-50%) scale(0); } 100% { transform: translateY(-50%) scale(1); } }
+
+        .bubble-left { top: 50%; right: 100%; transform: translateY(-50%); margin-right: 12px; transform-origin: center right; animation: popLeft 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .bubble-left::after { top: 50%; left: 100%; margin-top: -5px; border-color: transparent transparent transparent white; }
+        @keyframes popLeft { 0% { transform: translateY(-50%) scale(0); } 100% { transform: translateY(-50%) scale(1); } }
 
         #control-bar { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 15px; z-index: 100; width: max-content;}
         #control-bar button { padding: 10px 15px; font-size: 16px; cursor: pointer; border: none; border-radius: 5px; font-weight: bold;}
@@ -149,20 +114,20 @@
         #chat-input-area input { padding: 10px; border-radius: 20px; border: none; outline: none; width: 150px;}
         #chat-input-area button { padding: 10px 15px; border-radius: 20px; border: none; background: #3498db; color: white; cursor: pointer;}
 
+        .interactive-btn { font-size: 20px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); border-radius: 50%; width: 35px; height: 35px; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: 0.2s; }
+        .interactive-btn:hover { background: #e74c3c; transform: scale(1.1); }
+        .flying-item { position: fixed; z-index: 1000; font-size: 40px; pointer-events: none; transition: all 0.6s cubic-bezier(0.25, 0.1, 0.25, 1); transform: translate(-50%, -50%); text-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+        .item-splat { animation: splatAnim 0.5s ease-out forwards; }
+        @keyframes splatAnim { 0% { transform: translate(-50%, -50%) scale(1); opacity: 1; } 100% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; } }
+
         @media (max-width: 768px) {
             .poker-table { width: 80vw; height: 120vw; max-height: 55vh; border-radius: 120px; }
             #leaderboard-container { top: 60px; left: 10px; padding: 5px 10px; }
             #deck-container { top: 15%; left: 50%; } 
-            
-            /* 手机端奖池弹出时稍微缩小一点，避免占满屏幕 */
             #pot-container.show { transform: translate(-50%, -50%) scale(1); }
 
-            .seat-1 { top: 85%; left: 0%; } 
-            .seat-2 { top: 50%; left: -5%; } 
-            .seat-3 { top: 15%; left: 0%; } 
-            .seat-5 { top: 15%; left: 100%; } 
-            .seat-6 { top: 50%; left: 105%; } 
-            .seat-7 { top: 85%; left: 100%; } 
+            .seat-1 { top: 85%; left: 0%; } .seat-2 { top: 50%; left: -5%; } .seat-3 { top: 15%; left: 0%; } 
+            .seat-5 { top: 15%; left: 100%; } .seat-6 { top: 50%; left: 105%; } .seat-7 { top: 85%; left: 100%; } 
 
             #control-bar { width: 100vw; flex-wrap: nowrap; justify-content: center; bottom: 5px; padding: 5px; box-sizing: border-box; }
             #control-bar button { padding: 8px 5px; font-size: 14px; flex: 1 1 auto; margin: 2px; } 
@@ -184,21 +149,46 @@
     <div id="login-screen">
         <h1 style="font-size: 40px; margin-bottom: 30px;">♠️ Web 德州扑克 ♥️</h1>
         <p id="login-error-msg"></p>
-        <input type="text" id="username" placeholder="输入预设账号">
-        <input type="password" id="password" placeholder="输入密码">
+        <input type="text" id="username" placeholder="输入预设账号" maxlength="12">
+        <input type="password" id="password" placeholder="输入密码" maxlength="20">
         <button onclick="joinGame()">登录游戏</button>
     </div>
 
     <div id="top-bar" style="display: none; position: absolute; top: 10px; right: 10px; z-index: 100;">
-        <button onclick="document.getElementById('password-modal').style.display='block'" style="background: #e67e22; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer;">⚙️ 修改密码</button>
+        <button onclick="document.getElementById('settings-modal').style.display='block'" style="background: #2c3e50; color: white; border: 2px solid #3498db; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">⚙️ 设置</button>
     </div>
 
-    <div id="password-modal" class="modal">
-        <h3 style="margin-top: 0; color: #f1c40f;">修改我的密码</h3>
-        <input type="password" id="old-pwd" placeholder="原密码">
-        <input type="password" id="new-pwd" placeholder="新密码">
-        <button onclick="changePassword()">确认修改</button>
-        <button id="btn-close-modal" onclick="document.getElementById('password-modal').style.display='none'">取消</button>
+    <div id="settings-modal" class="modal">
+        <h3 style="margin-top: 0; color: #f1c40f;">⚙️ 玩家设置</h3>
+        
+        <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #34495e;">
+            <h4 style="margin: 0 0 10px 0; color: #3498db;">🖼️ 更换头像</h4>
+            <input type="file" id="avatar-upload" accept="image/*" style="display:none;" onchange="previewAvatar(event)">
+            
+            <div id="avatar-preview-btn" style="width: 70px; height: 70px; border-radius: 50%; background: #2c3e50; margin: 0 auto 10px auto; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 2px dashed #3498db; cursor: pointer; transition: 0.2s;" onclick="document.getElementById('avatar-upload').click()">
+                <span style="font-size: 30px; color: #7f8c8d;">+</span>
+            </div>
+            
+            <div id="cropper-container" style="display:none; width: 100%; height: 250px; margin-bottom: 10px; background: #000; overflow: hidden;">
+                <img id="cropper-image" src="" style="max-width: 100%; display: block;">
+            </div>
+
+            <div id="cropper-actions" style="display:none; flex-direction: row; gap: 10px; margin-bottom: 10px;">
+                <button onclick="cancelCrop()" style="background: #e74c3c; flex: 1; margin: 0;">取消</button>
+                <button onclick="confirmCropAndUpload()" style="background: #2ecc71; flex: 1; margin: 0;">裁剪并上传</button>
+            </div>
+            
+            <button id="btn-select-image" onclick="document.getElementById('avatar-upload').click()" style="background: #3498db; width: 100%; margin: 0;">选择新图片</button>
+        </div>
+
+        <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; border: 1px solid #34495e;">
+            <h4 style="margin: 0 0 10px 0; color: #e67e22;">🔑 修改密码</h4>
+            <input type="password" id="old-pwd" placeholder="原密码" maxlength="20">
+            <input type="password" id="new-pwd" placeholder="新密码" maxlength="20">
+            <button onclick="changePassword()" style="background: #e67e22; width: 100%; margin: 0;">确认修改</button>
+        </div>
+
+        <button id="btn-close-modal" onclick="closeSettings()" style="width: 100%; background: #95a5a6; margin-top: 15px;">关闭面板</button>
     </div>
 
     <div id="game-screen">
@@ -209,7 +199,6 @@
 
         <div class="poker-table">
             <div class="table-hint">👆 点击桌面查看奖池</div>
-
             <div id="deck-container">
                 <div class="card hidden-bg deck-card"></div><div class="card hidden-bg deck-card"></div><div class="card hidden-bg deck-card"></div>
             </div>
@@ -227,7 +216,7 @@
         
         <div id="chat-input-area">
             <button id="btn-quick-chat" onclick="toggleQuickChat()">💬 快捷</button>
-            <input type="text" id="chat-input" placeholder="嘲讽一下...">
+            <input type="text" id="chat-input" placeholder="嘲讽一下..." maxlength="30">
             <button onclick="sendChat()">发送</button>
             <div id="quick-chat-menu"></div>
         </div>
@@ -235,8 +224,15 @@
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
     <script>
         const socket = io();
+
+        const interactItems = {
+            'tomato': { emoji: '🍅', audio: './audio/tomato.mp3' },
+            'water': { emoji: '💧', audio: './audio/water.mp3' },
+            'cappuccino': { emoji: '☕', audio: './audio/cappuccino.mp3' }
+        };
 
         window.addEventListener('DOMContentLoaded', () => {
             initQuickChat(); 
@@ -247,17 +243,12 @@
                 });
             }
 
-            // 👉 核心修改 2：监听全局点击事件，控制奖池的显示与隐藏
             document.addEventListener('click', function(e) {
                 const potEl = document.getElementById('pot-container');
                 if (!potEl) return;
-                
-                // 判断点击的是否在牌桌内，并且不是点击在了玩家的座位上
                 if (e.target.closest('.poker-table') && !e.target.closest('.seat')) {
                     potEl.classList.add('show');
-                } 
-                // 如果点击了除了奖池本身之外的任何其他区域（比如黑色背景、按钮），就隐藏
-                else if (!e.target.closest('#pot-container')) {
+                } else if (!e.target.closest('#pot-container')) {
                     potEl.classList.remove('show');
                 }
             });
@@ -266,7 +257,6 @@
         let isChatCooldown = false;
         const CHAT_COOLDOWN_TIME = 3000; 
 
-        // 快捷语音配置
         const quickChatConfig = [
             { text: "快点吧，我等到花儿都谢了！", audioUrl: "./audio/配音文件.mp3" },
             { text: "交个朋友吧，加个微信？", audioUrl: "./audio/2.mp3" },
@@ -299,6 +289,13 @@
                     }
                 };
                 menu.appendChild(btn);
+            });
+
+            Object.keys(interactItems).forEach(key => {
+                let item = interactItems[key];
+                if (item.audio) {
+                    audioCache[`item_${key}`] = new Audio(item.audio);
+                }
             });
         }
 
@@ -379,8 +376,98 @@
         socket.on('loginError', (msg) => { document.getElementById('login-error-msg').innerText = msg; });
         socket.on('loginSuccess', (seatIdx) => { mySeatIndex = seatIdx; document.getElementById('login-screen').style.display = 'none'; document.getElementById('game-screen').style.display = 'block'; document.getElementById('top-bar').style.display = 'block'; });
         function changePassword() { const oldPwd = document.getElementById('old-pwd').value; const newPwd = document.getElementById('new-pwd').value; if (oldPwd && newPwd) socket.emit('changePassword', { oldPassword: oldPwd, newPassword: newPwd }); }
-        socket.on('passwordChanged', (msg) => { alert(msg); document.getElementById('password-modal').style.display='none'; });
+        socket.on('passwordChanged', (msg) => { alert(msg); closeSettings(); });
         socket.on('passwordChangeFailed', (msg) => { alert(msg); });
+
+        let cropper = null;
+        function previewAvatar(event) {
+            const file = event.target.files[0];
+            if (file) {
+                if (file.size > 5 * 1024 * 1024) { alert("原图太大了！请选择 5MB 以内的图片进行裁剪。"); event.target.value = ''; return; }
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('avatar-preview-btn').style.display = 'none';
+                    document.getElementById('btn-select-image').style.display = 'none';
+                    document.getElementById('cropper-container').style.display = 'block';
+                    document.getElementById('cropper-actions').style.display = 'flex';
+                    const image = document.getElementById('cropper-image');
+                    image.src = e.target.result;
+                    if (cropper) { cropper.destroy(); }
+                    cropper = new Cropper(image, { aspectRatio: 1, viewMode: 1, background: false });
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+        
+        function cancelCrop() {
+            if (cropper) { cropper.destroy(); cropper = null; }
+            document.getElementById('cropper-container').style.display = 'none';
+            document.getElementById('cropper-actions').style.display = 'none';
+            document.getElementById('avatar-preview-btn').style.display = 'flex';
+            document.getElementById('btn-select-image').style.display = 'block';
+            document.getElementById('avatar-upload').value = '';
+        }
+
+        function closeSettings() { document.getElementById('settings-modal').style.display = 'none'; cancelCrop(); }
+
+        function confirmCropAndUpload() {
+            if (!cropper) return;
+            const canvas = cropper.getCroppedCanvas({ width: 150, height: 150 });
+            const base64Avatar = canvas.toDataURL('image/jpeg', 0.8);
+            socket.emit('updateAvatar', base64Avatar);
+            cancelCrop(); 
+        }
+        
+        socket.on('avatarUpdated', (msg) => { alert(msg); closeSettings(); });
+
+        let itemThrowCooldown = false;
+        window.triggerThrowItem = function(event, targetServerIdx, itemId) {
+            event.stopPropagation(); 
+            if (itemThrowCooldown) return;
+            initAudio(); 
+            socket.emit('throwItem', { target: targetServerIdx, item: itemId });
+            itemThrowCooldown = true;
+            setTimeout(() => { itemThrowCooldown = false; }, 800);
+            let visualIdx = getVisualSeatId(targetServerIdx);
+            toggleSeat(visualIdx);
+        };
+
+        socket.on('itemThrown', (data) => {
+            const { from, to, item } = data;
+            const fromVisual = getVisualSeatId(from);
+            const toVisual = getVisualSeatId(to);
+
+            const fromEl = document.querySelector(`#seat-${fromVisual} .avatar`);
+            const toEl = document.querySelector(`#seat-${toVisual} .avatar`);
+
+            if (!fromEl || !toEl || !interactItems[item]) return;
+
+            const fromRect = fromEl.getBoundingClientRect();
+            const toRect = toEl.getBoundingClientRect();
+
+            const flyingEl = document.createElement('div');
+            flyingEl.className = 'flying-item';
+            flyingEl.innerText = interactItems[item].emoji;
+            
+            flyingEl.style.left = fromRect.left + (fromRect.width / 2) + 'px';
+            flyingEl.style.top = fromRect.top + (fromRect.height / 2) + 'px';
+            
+            document.body.appendChild(flyingEl);
+            void flyingEl.offsetWidth;
+
+            flyingEl.style.left = toRect.left + (toRect.width / 2) + 'px';
+            flyingEl.style.top = toRect.top + (toRect.height / 2) + 'px';
+            flyingEl.style.transform = 'translate(-50%, -50%) rotate(720deg)';
+
+            setTimeout(() => {
+                if (audioCache[`item_${item}`]) {
+                    audioCache[`item_${item}`].currentTime = 0;
+                    audioCache[`item_${item}`].play().catch(e=>console.log("Audio not allowed yet"));
+                }
+                flyingEl.classList.add('item-splat');
+                setTimeout(() => flyingEl.remove(), 500); 
+            }, 600); 
+        });
 
         socket.on('updateTable', (data) => {
             let triggerDealAnim = false;
@@ -462,12 +549,28 @@
                 const statusColor = player.isDisconnected ? '#e67e22' : (player.isReady ? '#2ecc71' : (player.status === 'folded' ? '#e74c3c' : (player.status === 'spectator' ? '#7f8c8d' : '#bdc3c7')));
                 const avatarOpacity = (player.status === 'spectator' || player.isDisconnected) ? '0.5' : '1'; 
 
+                let avatarRender = player.avatar.startsWith('data:image') 
+                    ? `<img src="${player.avatar}" style="width: 100%; height: 100%; object-fit: cover;">` 
+                    : player.avatar;
+
+                let interactHTML = '';
+                if (i !== mySeatIndex && mySeatIndex !== -1) {
+                    interactHTML = `
+                    <div style="display:flex; justify-content:space-around; margin-top:12px; border-top:1px solid #444; padding-top:10px;">
+                        <button class="interactive-btn" onclick="triggerThrowItem(event, ${i}, 'tomato')" title="砸番茄">🍅</button>
+                        <button class="interactive-btn" onclick="triggerThrowItem(event, ${i}, 'water')" title="泼水">💧</button>
+                        <button class="interactive-btn" onclick="triggerThrowItem(event, ${i}, 'cappuccino')" title="倒卡布奇诺">☕</button>
+                    </div>`;
+                }
+
                 seatDiv.innerHTML = `
                     <div class="player-panel ${isTurn} ${isExpanded}" onclick="toggleSeat(${visualIdx})">
                         ${crownHTML} ${roleHTML}
-                        <div class="player-basic" style="opacity: ${avatarOpacity}"><div class="avatar">${player.avatar}</div><div class="chips" style="color:${statusColor}">💰 ${player.chips}</div></div>
-                        <div class="player-details"><div class="details-avatar">${player.avatar}</div><div class="details-name" style="color:${statusColor}">${player.username} ${statusText}</div>
-                        <div class="details-info">资产: <span>💰 ${player.chips}</span><br>欠款: <span style="color:#e74c3c;">🏦 ${player.debt > 0 ? player.debt : 0}</span><br>本轮: <span>💵 ${player.roundBet}</span></div></div>
+                        <div class="player-basic" style="opacity: ${avatarOpacity}"><div class="avatar">${avatarRender}</div><div class="chips" style="color:${statusColor}">💰 ${player.chips}</div></div>
+                        <div class="player-details"><div class="details-avatar">${avatarRender}</div><div class="details-name" style="color:${statusColor}">${player.username} ${statusText}</div>
+                        <div class="details-info">资产: <span>💰 ${player.chips}</span><br>欠款: <span style="color:#e74c3c;">🏦 ${player.debt > 0 ? player.debt : 0}</span><br>本轮: <span>💵 ${player.roundBet}</span></div>
+                        ${interactHTML}
+                        </div>
                     </div>
                     ${holeCardsHTML}
                 `;
@@ -476,52 +579,62 @@
             const bar = document.getElementById('control-bar'); bar.innerHTML = ''; 
             const me = data.seats[mySeatIndex]; if (!me) return;
             
+            // 👉 核心修正：极其严谨的底部控制栏逻辑，完全杜绝卡按钮现象
             if (me.status === 'spectator') {
                 bar.innerHTML = `<span style="color:#95a5a6; font-size:18px; font-weight:bold;">👀 观战中</span>
-                                 <button style="background:#e74c3c;color:white; margin-left:15px; box-shadow: 0 0 10px #e74c3c;" onclick="initAudio(); socket.emit('borrow')">🏦 借款 1000</button>`;
+                                 <button style="background:#e74c3c;color:white; margin-left:15px; box-shadow: 0 0 10px #e74c3c; padding: 10px 15px; border-radius: 5px; border:none; cursor:pointer;" onclick="initAudio(); socket.emit('borrow')">🏦 借款 1000</button>`;
             }
-            else if ((data.gameState === 'waiting') && !me.isReady) { 
-                bar.innerHTML = `<button style="background:#2ecc71;color:white;" onclick="initAudio(); socket.emit('ready')">✅ 准备开始</button>`; 
-                if (me.debt > 0 && me.chips > 0) {
-                    bar.innerHTML += `<button style="background:#e67e22;color:white; margin-left:15px;" onclick="socket.emit('repay')">💸 还款 (欠 ${me.debt})</button>`;
+            else if (data.gameState === 'waiting') { 
+                if (!me.isReady) {
+                    bar.innerHTML = `<button style="background:#2ecc71;color:white; padding: 12px 25px; font-size: 18px; box-shadow: 0 0 15px #2ecc71; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;" onclick="initAudio(); socket.emit('ready')">✅ 准备开始</button>`; 
+                    if (me.debt > 0 && me.chips > 0) {
+                        bar.innerHTML += `<button style="background:#e67e22;color:white; margin-left:15px; border: none; border-radius: 5px; padding: 12px 15px; cursor: pointer; font-weight: bold;" onclick="socket.emit('repay')">💸 还款 (欠 ${me.debt})</button>`;
+                    }
+                } else {
+                    bar.innerHTML = `<button style="background:#e74c3c;color:white; padding: 12px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;" onclick="initAudio(); socket.emit('cancelReady')">❌ 取消准备</button>
+                                     <span style="color:#2ecc71; font-size:16px; margin-left: 10px; display:flex; align-items:center; font-weight: bold;">✅ 等待中...</span>`; 
                 }
             } 
-            else if ((data.gameState === 'waiting') && me.isReady) { 
-                bar.innerHTML = `<span style="color:#2ecc71; font-size:18px;">✅ 等待其他人...</span>`; 
-            }
-            else if (data.gameState !== 'waiting' && me.status === 'waiting') {
-                bar.innerHTML = `<span style="color:#f1c40f; font-size:18px;">⏳ 等待本局结束后加入...</span>`;
-            }
-            else if (data.gameState === 'showdown' && me.status === 'playing') {
-                if (!me.hasRevealed) bar.innerHTML = `<button style="background:#e67e22;color:white;box-shadow: 0 0 15px #e67e22; font-size: 20px;" onclick="socket.emit('revealCards')">🃏 亮出你的底牌！</button>`;
-                else bar.innerHTML = `<span style="color:#e67e22; font-size:18px;">👀 等待其他对手亮牌...</span>`;
-            }
-            else if (data.gameState !== 'waiting' && data.gameState !== 'showdown' && data.currentTurnSeatIdx === mySeatIndex) {
-                let callDiff = data.currentHighestBet - me.roundBet; 
-                bar.innerHTML += `<button style="background:#95a5a6;color:white;" onclick="socket.emit('playerAction', {type: 'fold'})">🏳️ 弃牌</button>`;
-                if (callDiff === 0) bar.innerHTML += `<button style="background:#f39c12;color:white;" onclick="socket.emit('playerAction', {type: 'check'})">✊ 过牌 (Check)</button>`;
-                else if (me.chips > callDiff) bar.innerHTML += `<button style="background:#3498db;color:white;" onclick="socket.emit('playerAction', {type: 'call'})">💵 跟注 (补 ${callDiff})</button>`;
-                
-                let maxRaise = me.chips - callDiff;
-                if (maxRaise > 0) {
-                    let raiseAmounts = [50, 100, 200, 500, 1000, 2000];
-                    let availableRaises = raiseAmounts.filter(amt => amt <= maxRaise);
-                    if (availableRaises.length === 0) availableRaises.push(maxRaise);
-
-                    let raiseMenuHTML = `<div id="raise-menu" style="display: none; position: absolute; bottom: 110%; left: 50%; transform: translateX(-50%); background: rgba(22, 33, 62, 0.95); border: 2px solid #e74c3c; border-radius: 10px; padding: 10px; flex-direction: column; gap: 8px; min-width: 100px; box-shadow: 0 5px 20px rgba(0,0,0,0.9); z-index: 200;">`;
-                    availableRaises.forEach(amt => {
-                        raiseMenuHTML += `<button style="background: #c0392b; color: white; border: none; padding: 8px; border-radius: 5px; cursor: pointer; width: 100%; font-size: 14px; box-shadow: none; margin: 0;" onclick="socket.emit('playerAction', {type: 'raise', amount: ${amt}}); document.getElementById('raise-menu').style.display='none';">+ ${amt}</button>`;
-                    });
-                    raiseMenuHTML += `</div>`;
-
-                    bar.innerHTML += `
-                    <div style="position: relative; display: flex; flex: 1; min-width: max-content; margin: 0 2px;">
-                        <button style="background:#e74c3c; color:white; width: 100%; margin: 0; padding: 10px 15px; font-size: 16px; border-radius: 5px; font-weight: bold; border: none; cursor: pointer;" onclick="let m = document.getElementById('raise-menu'); m.style.display = (m.style.display === 'flex' ? 'none' : 'flex');">🔥 加注...</button>
-                        ${raiseMenuHTML}
-                    </div>`;
+            else if (data.gameState !== 'waiting') {
+                if (me.status === 'waiting') {
+                    bar.innerHTML = `<span style="color:#f1c40f; font-size:18px; font-weight:bold;">⏳ 等待本局结束后加入...</span>`;
                 }
-                
-                if (me.chips > 0) bar.innerHTML += `<button style="background:#8e44ad;color:white;box-shadow: 0 0 10px #8e44ad;" onclick="socket.emit('playerAction', {type: 'all-in'})">🌋 All-In (${me.chips})</button>`;
+                else if (me.status === 'folded') {
+                    bar.innerHTML = `<span style="color:#95a5a6; font-size:18px; font-weight:bold;">🏳️ 已经弃牌，等待下一局...</span>`;
+                }
+                else if (me.status === 'playing') {
+                    if (data.gameState === 'showdown') {
+                        if (!me.hasRevealed) bar.innerHTML = `<button style="background:#e67e22;color:white;box-shadow: 0 0 15px #e67e22; font-size: 20px; border:none; border-radius:5px; padding:10px 20px; cursor:pointer;" onclick="socket.emit('revealCards')">🃏 亮出你的底牌！</button>`;
+                        else bar.innerHTML = `<span style="color:#e67e22; font-size:18px; font-weight:bold;">👀 等待其他对手亮牌...</span>`;
+                    }
+                    else if (data.currentTurnSeatIdx === mySeatIndex) {
+                        let callDiff = data.currentHighestBet - me.roundBet; 
+                        bar.innerHTML += `<button style="background:#95a5a6;color:white;" onclick="socket.emit('playerAction', {type: 'fold'})">🏳️ 弃牌</button>`;
+                        if (callDiff === 0) bar.innerHTML += `<button style="background:#f39c12;color:white;" onclick="socket.emit('playerAction', {type: 'check'})">✊ 过牌 (Check)</button>`;
+                        else if (me.chips > callDiff) bar.innerHTML += `<button style="background:#3498db;color:white;" onclick="socket.emit('playerAction', {type: 'call'})">💵 跟注 (补 ${callDiff})</button>`;
+                        
+                        let maxRaise = me.chips - callDiff;
+                        if (maxRaise > 0) {
+                            let raiseAmounts = [50, 100, 200, 500, 1000, 2000];
+                            let availableRaises = raiseAmounts.filter(amt => amt <= maxRaise);
+                            if (availableRaises.length === 0) availableRaises.push(maxRaise);
+
+                            let raiseMenuHTML = `<div id="raise-menu" style="display: none; position: absolute; bottom: 110%; left: 50%; transform: translateX(-50%); background: rgba(22, 33, 62, 0.95); border: 2px solid #e74c3c; border-radius: 10px; padding: 10px; flex-direction: column; gap: 8px; min-width: 100px; box-shadow: 0 5px 20px rgba(0,0,0,0.9); z-index: 200;">`;
+                            availableRaises.forEach(amt => {
+                                raiseMenuHTML += `<button style="background: #c0392b; color: white; border: none; padding: 8px; border-radius: 5px; cursor: pointer; width: 100%; font-size: 14px; box-shadow: none; margin: 0;" onclick="socket.emit('playerAction', {type: 'raise', amount: ${amt}}); document.getElementById('raise-menu').style.display='none';">+ ${amt}</button>`;
+                            });
+                            raiseMenuHTML += `</div>`;
+
+                            bar.innerHTML += `
+                            <div style="position: relative; display: flex; flex: 1; min-width: max-content; margin: 0 2px;">
+                                <button style="background:#e74c3c; color:white; width: 100%; margin: 0; padding: 10px 15px; font-size: 16px; border-radius: 5px; font-weight: bold; border: none; cursor: pointer;" onclick="let m = document.getElementById('raise-menu'); m.style.display = (m.style.display === 'flex' ? 'none' : 'flex');">🔥 加注...</button>
+                                ${raiseMenuHTML}
+                            </div>`;
+                        }
+                        
+                        if (me.chips > 0) bar.innerHTML += `<button style="background:#8e44ad;color:white;box-shadow: 0 0 10px #8e44ad;" onclick="socket.emit('playerAction', {type: 'all-in'})">🌋 All-In (${me.chips})</button>`;
+                    }
+                }
             }
 
             if ((triggerDealAnim || isDealingAnimationPlaying) && bar) { bar.style.display = 'none'; } else if (bar) { bar.style.display = 'flex'; }
@@ -562,8 +675,17 @@
                 audioCache[data.text].play().catch(e => console.log("等待用户交互后才能播放语音")); 
             }
 
+            let dirClass = 'bubble-up'; 
+            if (visualIdx === 3 || visualIdx === 4 || visualIdx === 5) {
+                dirClass = 'bubble-down'; 
+            } else if (visualIdx === 2) {
+                dirClass = 'bubble-right'; 
+            } else if (visualIdx === 6) {
+                dirClass = 'bubble-left'; 
+            }
+
             const bubble = document.createElement('div'); 
-            bubble.className = 'chat-bubble'; 
+            bubble.className = `chat-bubble ${dirClass}`; 
             bubble.innerText = data.text; 
             seatDiv.appendChild(bubble); 
             setTimeout(() => { bubble.remove(); }, 3000); 
